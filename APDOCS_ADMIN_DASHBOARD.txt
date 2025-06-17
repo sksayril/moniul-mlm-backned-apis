@@ -1,0 +1,146 @@
+=================================================
+ADMIN DASHBOARD API DOCUMENTATION
+=================================================
+
+This document outlines the API endpoints for the admin dashboard that provide access to key metrics, statistics, and data for visualization in graphs and charts.
+
+=================================================
+1. DASHBOARD STATISTICS
+=================================================
+
+--------------------------------------------------
+1.1 GET DASHBOARD STATISTICS
+--------------------------------------------------
+Endpoint: GET /api/admin/dashboard/stats
+Description: Get comprehensive statistics for admin dashboard including user metrics, revenue, withdrawals, and chart data
+
+Parameters:
+- startDate (optional): Start date for time-range based metrics (YYYY-MM-DD)
+- endDate (optional): End date for time-range based metrics (YYYY-MM-DD)
+
+Request:
+```
+GET /api/admin/dashboard/stats?startDate=2023-01-01&endDate=2023-01-31 HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "userStats": {
+      "totalUsers": 1250,
+      "newUsers": 87,
+      "activeSubscriptions": 980,
+      "activeTpins": 850,
+      "pendingSubscriptions": 45,
+      "pendingTpins": 30
+    },
+    "financialStats": {
+      "totalRevenue": 985000,
+      "revenueInPeriod": 125000,
+      "transactionsInPeriod": 87,
+      "totalWithdrawals": {
+        "pending": {
+          "totalAmount": 25000,
+          "count": 32
+        },
+        "approved": {
+          "totalAmount": 75000,
+          "count": 120
+        },
+        "rejected": {
+          "totalAmount": 12000,
+          "count": 15
+        }
+      }
+    },
+    "mlmStats": {
+      "activeReferrers": 790,
+      "totalTeamSize": 4500,
+      "totalDirectIncome": 35000,
+      "totalMatrixIncome": 125000,
+      "totalSelfIncome": 85000,
+      "totalRankRewards": 25000,
+      "activeTradingPackages": 380,
+      "rankDistribution": [
+        {
+          "_id": "Bronze",
+          "count": 200
+        },
+        {
+          "_id": "Silver",
+          "count": 150
+        },
+        {
+          "_id": "Gold",
+          "count": 75
+        },
+        {
+          "_id": "Diamond",
+          "count": 25
+        },
+        {
+          "_id": "Platinum",
+          "count": 10
+        }
+      ]
+    },
+    "chartData": {
+      "labels": ["2023-01-01", "2023-01-02", "2023-01-03", "..."],
+      "datasets": {
+        "newUsers": [5, 7, 3, 8, 12, 15, 10, "..."],
+        "revenue": [15000, 12000, 18000, 22000, 17000, "..."],
+        "withdrawals": [8000, 5000, 7000, 9000, 11000, "..."]
+      }
+    }
+  }
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Not authorized to access this route"
+}
+```
+
+Error Response (500 Internal Server Error):
+```
+{
+  "status": "error",
+  "message": "Error fetching dashboard statistics",
+  "error": "Detailed error message"
+}
+```
+
+=================================================
+USING THE DASHBOARD DATA
+=================================================
+
+The dashboard API provides data in formats ready to use with common charting libraries like Chart.js, Recharts, or D3.js. Here's how you can use different sections:
+
+1. User Statistics:
+   - Display in number cards or gauges
+   - Create ratio visualizations (e.g., TPIN activation rate)
+   - Track user growth trends
+
+2. Financial Statistics:
+   - Revenue overview cards
+   - Withdrawal processing status pie charts
+   - Transaction volume indicators
+
+3. MLM Stats:
+   - Rank distribution in pie or bar charts
+   - Income type breakdown
+   - Team growth metrics
+
+4. Chart Data:
+   - Time series line charts for user growth
+   - Revenue trend line or area charts
+   - Daily/weekly/monthly comparison bar charts
+
+The date range parameters allow for flexible reporting periods - daily, weekly, monthly, quarterly, or custom ranges as needed.

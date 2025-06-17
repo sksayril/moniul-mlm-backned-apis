@@ -1,0 +1,616 @@
+==============================================
+API DOCUMENTATION - MLM SYSTEM
+==============================================
+
+BASE URL: http://localhost:3100
+
+--------------------------------------------------
+1. USER MLM APIS
+--------------------------------------------------
+
+1.1 GENERATE REFERRAL CODE
+--------------------------------------------------
+Endpoint: POST /api/mlm/referral/generate
+Description: Generate a unique referral code for the user (requires active subscription and TPIN)
+
+Request:
+```
+POST /api/mlm/referral/generate HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Referral code generated successfully",
+  "data": {
+    "referralCode": "JOH1A2B3"
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "You need an active subscription and TPIN to generate a referral code"
+}
+```
+
+--------------------------------------------------
+1.2 JOIN USING REFERRAL CODE
+--------------------------------------------------
+Endpoint: POST /api/mlm/referral/join
+Description: Join under another user using their referral code (requires active subscription and TPIN)
+
+Request:
+```
+POST /api/mlm/referral/join HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "referralCode": "JOH1A2B3"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Successfully joined referral network",
+  "data": {
+    "referrer": {
+      "name": "John Doe",
+      "email": "john@example.com"
+    }
+  }
+}
+```
+
+Error Response (404 Not Found):
+```
+{
+  "status": "error",
+  "message": "Invalid referral code"
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "You are already part of a referral network"
+}
+```
+
+--------------------------------------------------
+1.3 GET REFERRAL DASHBOARD
+--------------------------------------------------
+Endpoint: GET /api/mlm/dashboard
+Description: Get user's MLM dashboard with referral network and income details
+
+Request:
+```
+GET /api/mlm/dashboard HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "referralCode": "JOH1A2B3",
+    "referrer": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "referralCode": "JAN4D5E6"
+    },
+    "directReferrals": [
+      {
+        "_id": "60d5ec9af11ab83456789013",
+        "name": "Alice Brown",
+        "email": "alice@example.com",
+        "createdAt": "2023-06-25T12:00:00.000Z"
+      }
+    ],
+    "teamSize": 5,
+    "matrixDetails": [
+      { "level": 1, "count": 2 },
+      { "level": 2, "count": 3 },
+      { "level": 3, "count": 0 },
+      { "level": 4, "count": 0 },
+      { "level": 5, "count": 0 },
+      { "level": 6, "count": 0 },
+      { "level": 7, "count": 0 }
+    ],
+    "rank": "Associate",
+    "incomeWallet": {
+      "balance": 250,
+      "selfIncome": 50,
+      "directIncome": 0,
+      "matrixIncome": 0,
+      "dailyTeamIncome": 0,
+      "rankRewards": 200,
+      "fxTradingIncome": 0,
+      "lastUpdated": "2023-06-25T12:00:00.000Z"
+    },
+    "tradingPackage": {
+      "purchased": false
+    }
+  }
+}
+```
+
+--------------------------------------------------
+1.4 PURCHASE TRADING PACKAGE
+--------------------------------------------------
+Endpoint: POST /api/mlm/trading/purchase
+Description: Request to purchase an FX trading package (requires active subscription and TPIN)
+
+Request:
+```
+POST /api/mlm/trading/purchase HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="paymentId"
+
+PAYMENT123456
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="screenshot"; filename="payment.jpg"
+Content-Type: image/jpeg
+
+[Binary image data]
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Trading package purchase submitted for approval",
+  "data": {
+    "paymentId": "PAYMENT123456",
+    "amount": 5999,
+    "currency": "INR",
+    "status": "pending"
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "You need an active subscription and TPIN to purchase a trading package"
+}
+```
+
+--------------------------------------------------
+1.5 REQUEST WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/mlm/withdrawal/request
+Description: Request to withdraw funds from income wallet (requires active subscription and TPIN)
+
+Request:
+```
+POST /api/mlm/withdrawal/request HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "amount": 150
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal request submitted successfully",
+  "data": {
+    "amount": 150,
+    "status": "pending",
+    "requestDate": "2023-06-25T12:00:00.000Z",
+    "remainingBalance": 100
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Minimum withdrawal amount is ₹150"
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Insufficient balance for withdrawal"
+}
+```
+
+--------------------------------------------------
+1.6 GET WITHDRAWAL HISTORY
+--------------------------------------------------
+Endpoint: GET /api/mlm/withdrawal/history
+Description: Get user's withdrawal history
+
+Request:
+```
+GET /api/mlm/withdrawal/history HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "withdrawals": [
+      {
+        "_id": "60d5ec9af11ab8345678abcd",
+        "amount": 150,
+        "requestDate": "2023-06-25T12:00:00.000Z",
+        "status": "approved",
+        "processedDate": "2023-06-26T12:00:00.000Z",
+        "transactionId": "TXN123456"
+      },
+      {
+        "_id": "60d5ec9af11ab8345678efgh",
+        "amount": 200,
+        "requestDate": "2023-06-27T12:00:00.000Z",
+        "status": "pending"
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2. ADMIN MLM APIS
+--------------------------------------------------
+
+2.1 GET PENDING TRADING PACKAGES
+--------------------------------------------------
+Endpoint: GET /api/admin/mlm/trading/pending
+Description: Get all pending trading package purchase requests
+
+Request:
+```
+GET /api/admin/mlm/trading/pending HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "pendingRequests": [
+      {
+        "userId": "60d5ec9af11ab83456789012",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "paymentDetails": [
+          {
+            "paymentId": "PAYMENT123456",
+            "amount": 5999,
+            "currency": "INR",
+            "status": "pending",
+            "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+            "date": "2023-06-25T12:00:00.000Z"
+          }
+        ]
+      },
+      {
+        "userId": "60d5ec9af11ab83456789013",
+        "name": "Jane Smith",
+        "email": "jane@example.com",
+        "paymentDetails": [
+          {
+            "paymentId": "PAYMENT654321",
+            "amount": 5999,
+            "currency": "INR",
+            "status": "pending",
+            "screenshot": "/uploads/payments/60d5ec9af11ab83456789013-1624627000000-payment.jpg",
+            "date": "2023-06-25T13:00:00.000Z"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2.2 APPROVE TRADING PACKAGE
+--------------------------------------------------
+Endpoint: POST /api/admin/mlm/trading/approve
+Description: Approve a trading package purchase request
+
+Request:
+```
+POST /api/admin/mlm/trading/approve HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "paymentId": "PAYMENT123456"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Trading package approved successfully",
+  "data": {
+    "tradingPackage": {
+      "purchased": true,
+      "startDate": "2023-06-25T12:00:00.000Z",
+      "expectedReturn": 15000
+    }
+  }
+}
+```
+
+--------------------------------------------------
+2.3 REJECT TRADING PACKAGE
+--------------------------------------------------
+Endpoint: POST /api/admin/mlm/trading/reject
+Description: Reject a trading package purchase request
+
+Request:
+```
+POST /api/admin/mlm/trading/reject HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "paymentId": "PAYMENT123456",
+  "reason": "Invalid payment proof"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Trading package rejected successfully",
+  "data": {
+    "payment": {
+      "paymentId": "PAYMENT123456",
+      "amount": 5999,
+      "currency": "INR",
+      "status": "rejected",
+      "rejectionReason": "Invalid payment proof",
+      "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+      "date": "2023-06-25T12:00:00.000Z"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+2.4 GET PENDING WITHDRAWALS
+--------------------------------------------------
+Endpoint: GET /api/admin/mlm/withdrawal/pending
+Description: Get all pending withdrawal requests
+
+Request:
+```
+GET /api/admin/mlm/withdrawal/pending HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "pendingWithdrawals": [
+      {
+        "userId": "60d5ec9af11ab83456789012",
+        "withdrawalId": "60d5ec9af11ab8345678abcd",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "amount": 150,
+        "requestDate": "2023-06-25T12:00:00.000Z"
+      },
+      {
+        "userId": "60d5ec9af11ab83456789013",
+        "withdrawalId": "60d5ec9af11ab8345678efgh",
+        "userName": "Jane Smith",
+        "userEmail": "jane@example.com",
+        "amount": 200,
+        "requestDate": "2023-06-25T13:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2.5 APPROVE WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/admin/mlm/withdrawal/approve
+Description: Approve a withdrawal request
+
+Request:
+```
+POST /api/admin/mlm/withdrawal/approve HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "withdrawalId": "60d5ec9af11ab8345678abcd",
+  "transactionId": "TXN123456"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal approved successfully",
+  "data": {
+    "withdrawal": {
+      "amount": 150,
+      "requestDate": "2023-06-25T12:00:00.000Z",
+      "status": "approved",
+      "processedDate": "2023-06-26T12:00:00.000Z",
+      "transactionId": "TXN123456"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+2.6 REJECT WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/admin/mlm/withdrawal/reject
+Description: Reject a withdrawal request
+
+Request:
+```
+POST /api/admin/mlm/withdrawal/reject HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "withdrawalId": "60d5ec9af11ab8345678abcd",
+  "reason": "Invalid bank details"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal rejected successfully",
+  "data": {
+    "withdrawal": {
+      "amount": 150,
+      "requestDate": "2023-06-25T12:00:00.000Z",
+      "status": "rejected",
+      "processedDate": "2023-06-26T12:00:00.000Z",
+      "rejectionReason": "Invalid bank details"
+    },
+    "refundedAmount": 150,
+    "newBalance": 300
+  }
+}
+```
+
+--------------------------------------------------
+2.7 GET MLM METRICS
+--------------------------------------------------
+Endpoint: GET /api/admin/mlm/metrics
+Description: Get MLM system metrics and user statistics
+
+Request:
+```
+GET /api/admin/mlm/metrics HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "stats": {
+      "totalUsers": 50,
+      "activeTraders": 30,
+      "totalIncome": 75000
+    },
+    "users": [
+      {
+        "_id": "60d5ec9af11ab83456789012",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "referralCode": "JOH1A2B3",
+        "teamSize": 10,
+        "rank": "Senior",
+        "incomeWallet": {
+          "balance": 2500,
+          "selfIncome": 50,
+          "directIncome": 200,
+          "matrixIncome": 150,
+          "dailyTeamIncome": 100,
+          "rankRewards": 1000,
+          "fxTradingIncome": 1000
+        },
+        "tradingPackage": {
+          "purchased": true,
+          "startDate": "2023-06-01T12:00:00.000Z",
+          "expectedReturn": 15000
+        }
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+MLM SYSTEM OVERVIEW
+--------------------------------------------------
+
+The MLM system includes these income sources:
+
+1. Self Income: ₹50 on self-activation (when creating a referral code)
+2. Direct Income: ₹20 on each referral
+3. Matrix Income: 7-level commission from referral tree
+   - Level 1: ₹20 per user
+   - Level 2: ₹10 per user
+   - Level 3: ₹5 per user
+   - Level 4: ₹3 per user
+   - Level 5: ₹2 per user
+   - Level 6: ₹1 per user
+   - Level 7: ₹1 per user
+
+4. Rank Rewards:
+   - Associate (5+ team members): ₹200
+   - Senior (10+ team members): ₹500
+   - Manager (25+ team members): ₹1,000
+   - Director (50+ team members): ₹2,000
+   - Executive (100+ team members): ₹5,000
+
+5. FX Trading Income:
+   - Investment: ₹5,999
+   - Return: ₹15,000 in 35 days
+
+Withdrawal system:
+   - Minimum withdrawal: ₹150
+   - Status: pending → approved/rejected
+   - Admin manually approves withdrawals with transaction ID
+
+Note: All MLM activities require an active subscription and TPIN.

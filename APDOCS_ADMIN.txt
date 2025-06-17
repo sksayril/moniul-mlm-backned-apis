@@ -1,0 +1,382 @@
+==============================================
+API DOCUMENTATION - ADMIN ENDPOINTS
+==============================================
+
+BASE URL: http://localhost:3100
+
+NOTE: All admin endpoints require:
+1. A valid JWT token (from login)
+2. User must have "admin" role
+
+--------------------------------------------------
+1. GET ALL USERS
+--------------------------------------------------
+Endpoint: GET /api/admin/users
+Description: Get a list of all registered users
+
+Request:
+```
+GET /api/admin/users HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "users": [
+      {
+        "_id": "60d5ec9af11ab83456789012",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "role": "user",
+        "subscription": {
+          "active": true,
+          "expiryDate": "2024-06-25T12:00:00.000Z",
+          "plan": "premium"
+        },
+        "tpin": {
+          "active": true,
+          "requestDate": "2023-06-25T14:30:00.000Z"
+        },
+        "paymentDetails": [
+          {
+            "paymentId": "PAYMENT123456",
+            "amount": 99.99,
+            "currency": "USD",
+            "status": "verified",
+            "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+            "date": "2023-06-25T12:00:00.000Z"
+          }
+        ],
+        "createdAt": "2023-06-25T12:00:00.000Z",
+        "updatedAt": "2023-06-25T14:35:00.000Z"
+      },
+      {
+        "_id": "60d5ec9af11ab83456789013",
+        "name": "Jane Smith",
+        "email": "jane@example.com",
+        "role": "user",
+        "subscription": {
+          "active": false,
+          "expiryDate": null,
+          "plan": null
+        },
+        "tpin": {
+          "active": false,
+          "requestDate": null
+        },
+        "paymentDetails": [],
+        "createdAt": "2023-06-25T13:00:00.000Z",
+        "updatedAt": "2023-06-25T13:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+Error Response (403 Forbidden - Not Admin):
+```
+{
+  "status": "error",
+  "message": "You do not have permission to perform this action"
+}
+```
+
+--------------------------------------------------
+2. GET SINGLE USER
+--------------------------------------------------
+Endpoint: GET /api/admin/users/:id
+Description: Get details of a specific user by ID
+
+Request:
+```
+GET /api/admin/users/60d5ec9af11ab83456789012 HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "user",
+      "subscription": {
+        "active": true,
+        "expiryDate": "2024-06-25T12:00:00.000Z",
+        "plan": "premium"
+      },
+      "tpin": {
+        "active": true,
+        "requestDate": "2023-06-25T14:30:00.000Z"
+      },
+      "paymentDetails": [
+        {
+          "paymentId": "PAYMENT123456",
+          "amount": 99.99,
+          "currency": "USD",
+          "status": "verified",
+          "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+          "date": "2023-06-25T12:00:00.000Z"
+        }
+      ],
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T14:35:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (404 Not Found):
+```
+{
+  "status": "error",
+  "message": "No user found with that ID"
+}
+```
+
+--------------------------------------------------
+3. GET PENDING SUBSCRIPTION REQUESTS
+--------------------------------------------------
+Endpoint: GET /api/admin/subscriptions/pending
+Description: Get all pending subscription requests
+
+Request:
+```
+GET /api/admin/subscriptions/pending HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 1,
+  "data": {
+    "pendingRequests": [
+      {
+        "userId": "60d5ec9af11ab83456789013",
+        "userName": "Jane Smith",
+        "userEmail": "jane@example.com",
+        "paymentId": "PAYMENT789012",
+        "paymentDetails": {
+          "paymentId": "PAYMENT789012",
+          "amount": 99.99,
+          "currency": "USD",
+          "status": "pending",
+          "screenshot": "/uploads/payments/60d5ec9af11ab83456789013-1624630000000-payment.jpg",
+          "date": "2023-06-25T13:00:00.000Z"
+        },
+        "subscriptionPlan": "premium"
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+4. APPROVE SUBSCRIPTION
+--------------------------------------------------
+Endpoint: POST /api/admin/subscriptions/approve
+Description: Approve a user's subscription request
+
+Request:
+```
+POST /api/admin/subscriptions/approve HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789013",
+  "paymentId": "PAYMENT789012"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Subscription approved successfully",
+  "data": {
+    "subscription": {
+      "active": true,
+      "expiryDate": "2024-06-25T13:15:00.000Z",
+      "plan": "premium"
+    },
+    "payment": {
+      "paymentId": "PAYMENT789012",
+      "amount": 99.99,
+      "currency": "USD",
+      "status": "verified",
+      "screenshot": "/uploads/payments/60d5ec9af11ab83456789013-1624630000000-payment.jpg",
+      "date": "2023-06-25T13:00:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (404 Not Found):
+```
+{
+  "status": "error",
+  "message": "User not found"
+}
+```
+
+--------------------------------------------------
+5. REJECT SUBSCRIPTION
+--------------------------------------------------
+Endpoint: POST /api/admin/subscriptions/reject
+Description: Reject a user's subscription request
+
+Request:
+```
+POST /api/admin/subscriptions/reject HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789013",
+  "paymentId": "PAYMENT789012",
+  "reason": "Payment verification failed"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Subscription rejected successfully",
+  "data": {
+    "payment": {
+      "paymentId": "PAYMENT789012",
+      "amount": 99.99,
+      "currency": "USD",
+      "status": "rejected",
+      "rejectionReason": "Payment verification failed",
+      "screenshot": "/uploads/payments/60d5ec9af11ab83456789013-1624630000000-payment.jpg",
+      "date": "2023-06-25T13:00:00.000Z"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+6. GET PENDING TPIN REQUESTS
+--------------------------------------------------
+Endpoint: GET /api/admin/tpin/pending
+Description: Get all pending TPIN requests
+
+Request:
+```
+GET /api/admin/tpin/pending HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 1,
+  "data": {
+    "pendingRequests": [
+      {
+        "_id": "60d5ec9af11ab83456789015",
+        "name": "Alex Johnson",
+        "email": "alex@example.com",
+        "tpin": {
+          "requestDate": "2023-06-25T15:30:00.000Z",
+          "active": false
+        },
+        "subscription": {
+          "active": true,
+          "expiryDate": "2024-06-25T12:00:00.000Z",
+          "plan": "premium"
+        }
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+7. APPROVE TPIN REQUEST
+--------------------------------------------------
+Endpoint: POST /api/admin/tpin/approve
+Description: Approve a user's TPIN request and generate a TPIN
+
+Request:
+```
+POST /api/admin/tpin/approve HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789015"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "TPIN generated and assigned successfully",
+  "data": {
+    "tpin": {
+      "value": "654321",
+      "active": true,
+      "requestDate": "2023-06-25T15:30:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (404 Not Found):
+```
+{
+  "status": "error",
+  "message": "User not found"
+}
+```
+
+--------------------------------------------------
+8. REJECT TPIN REQUEST
+--------------------------------------------------
+Endpoint: POST /api/admin/tpin/reject
+Description: Reject a user's TPIN request
+
+Request:
+```
+POST /api/admin/tpin/reject HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789015",
+  "reason": "Suspicious account activity"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "TPIN request rejected successfully"
+}
+```
+
+Note: All admin API endpoints require the user to have the 'admin' role. If a regular user attempts to access these endpoints, they will receive a 403 Forbidden error.

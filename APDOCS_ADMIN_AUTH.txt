@@ -1,0 +1,127 @@
+==============================================
+API DOCUMENTATION - ADMIN AUTHENTICATION
+==============================================
+
+BASE URL: http://localhost:3100
+
+--------------------------------------------------
+1. REGISTER ADMIN USER
+--------------------------------------------------
+Endpoint: POST /api/admin/auth/register
+Description: Create a new admin user (protected by admin creation token)
+
+Request:
+```
+POST /api/admin/auth/register HTTP/1.1
+Host: localhost:3100
+Content-Type: application/json
+
+{
+  "name": "System Admin",
+  "email": "admin@example.com",
+  "password": "securepassword123",
+  "adminToken": "YOUR_ADMIN_CREATION_TOKEN"
+}
+```
+
+Success Response (201 Created):
+```
+{
+  "status": "success",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "data": {
+    "admin": {
+      "_id": "60d5ec9af11ab83456789099",
+      "name": "System Admin",
+      "email": "admin@example.com",
+      "role": "admin",
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:00:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (400 Bad Request - User already exists):
+```
+{
+  "status": "error",
+  "message": "User already exists"
+}
+```
+
+Error Response (401 Unauthorized - Invalid admin token):
+```
+{
+  "status": "error",
+  "message": "Invalid admin creation token"
+}
+```
+
+--------------------------------------------------
+2. ADMIN LOGIN
+--------------------------------------------------
+Endpoint: POST /api/admin/auth/login
+Description: Login as an admin user to get JWT token
+
+Request:
+```
+POST /api/admin/auth/login HTTP/1.1
+Host: localhost:3100
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "securepassword123"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "data": {
+    "admin": {
+      "_id": "60d5ec9af11ab83456789099",
+      "name": "System Admin",
+      "email": "admin@example.com",
+      "role": "admin",
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:00:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (401 Unauthorized - Invalid credentials):
+```
+{
+  "status": "error",
+  "message": "Incorrect email or password, or not an admin account"
+}
+```
+
+--------------------------------------------------
+IMPORTANT SETUP INSTRUCTIONS
+--------------------------------------------------
+
+Before using the admin registration API, you must:
+
+1. Add an ADMIN_CREATION_TOKEN to your .env file:
+   ```
+   ADMIN_CREATION_TOKEN=your_secure_random_token_here
+   ```
+
+2. Keep this token secure and only share it with authorized personnel
+
+3. Use this token only for the initial admin setup, and then:
+   - Remove it from environment variables, or
+   - Change it to a new value after creating the initial admin
+
+4. You can also use the provided script in scripts/create-admin.js to create an admin user directly:
+   ```
+   node scripts/create-admin.js
+   ```
+
+5. After creating the first admin user, additional admins can be created by existing admins through the admin dashboard that would be implemented in the frontend.

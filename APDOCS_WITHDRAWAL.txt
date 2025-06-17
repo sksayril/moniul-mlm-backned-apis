@@ -1,0 +1,339 @@
+==============================================
+API DOCUMENTATION - WITHDRAWAL SYSTEM
+==============================================
+
+BASE URL: http://localhost:3100
+
+--------------------------------------------------
+1. USER WITHDRAWAL APIS
+--------------------------------------------------
+
+1.1 REQUEST WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/mlm/withdrawal/request
+Description: Request a withdrawal from income wallet (requires active subscription and TPIN)
+
+Request:
+```
+POST /api/mlm/withdrawal/request HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+# For UPI payment method:
+{
+  "amount": 150,
+  "paymentMethod": "upi",
+  "upiId": "user@upi"
+}
+
+# OR for bank transfer payment method:
+{
+  "amount": 150,
+  "paymentMethod": "bank",
+  "bankDetails": {
+    "accountNumber": "1234567890",
+    "ifscCode": "ABCD0001234",
+    "accountHolderName": "John Doe",
+    "bankName": "State Bank of India"
+  }
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal request submitted successfully",
+  "data": {
+    "amount": 150,
+    "status": "pending",
+    "requestDate": "2023-06-25T12:00:00.000Z",
+    "paymentMethod": "upi",
+    "paymentDetails": {
+      "upiId": "user@upi"
+    },
+    "remainingBalance": 100
+  }
+}
+```
+
+Error Responses:
+
+1. Missing payment details (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Please provide a valid payment method (upi or bank)"
+}
+```
+
+2. Missing UPI ID (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Please provide UPI ID for UPI payment method"
+}
+```
+
+3. Incomplete bank details (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Please provide complete bank details for bank transfer"
+}
+```
+
+4. Minimum withdrawal amount (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Minimum withdrawal amount is ₹150"
+}
+```
+
+5. Insufficient balance (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Insufficient balance for withdrawal"
+}
+```
+
+--------------------------------------------------
+1.2 GET WITHDRAWAL HISTORY
+--------------------------------------------------
+Endpoint: GET /api/mlm/withdrawal/history
+Description: Get user's withdrawal history
+
+Request:
+```
+GET /api/mlm/withdrawal/history HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "withdrawals": [
+      {
+        "_id": "60d5ec9af11ab8345678abcd",
+        "amount": 150,
+        "requestDate": "2023-06-25T12:00:00.000Z",
+        "status": "approved",
+        "paymentMethod": "upi",
+        "paymentDetails": {
+          "upiId": "user@upi"
+        },
+        "processedDate": "2023-06-26T12:00:00.000Z",
+        "transactionId": "TXN123456"
+      },
+      {
+        "_id": "60d5ec9af11ab8345678efgh",
+        "amount": 200,
+        "requestDate": "2023-06-27T12:00:00.000Z",
+        "status": "pending",
+        "paymentMethod": "bank",
+        "paymentDetails": {
+          "bankDetails": {
+            "accountNumber": "1234567890",
+            "ifscCode": "ABCD0001234",
+            "accountHolderName": "John Doe",
+            "bankName": "State Bank of India"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2. ADMIN WITHDRAWAL APIS
+--------------------------------------------------
+
+2.1 GET PENDING WITHDRAWALS
+--------------------------------------------------
+Endpoint: GET /api/admin/mlm/withdrawal/pending
+Description: Get all pending withdrawal requests
+
+Request:
+```
+GET /api/admin/mlm/withdrawal/pending HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "pendingWithdrawals": [
+      {
+        "userId": "60d5ec9af11ab83456789012",
+        "withdrawalId": "60d5ec9af11ab8345678abcd",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "amount": 150,
+        "requestDate": "2023-06-25T12:00:00.000Z",
+        "paymentMethod": "upi",
+        "paymentDetails": {
+          "upiId": "user@upi"
+        },
+        "userPaymentMethods": {
+          "upiId": "user@upi",
+          "bankDetails": null
+        }
+      },
+      {
+        "userId": "60d5ec9af11ab83456789013",
+        "withdrawalId": "60d5ec9af11ab8345678efgh",
+        "userName": "Jane Smith",
+        "userEmail": "jane@example.com",
+        "amount": 200,
+        "requestDate": "2023-06-27T12:00:00.000Z",
+        "paymentMethod": "bank",
+        "paymentDetails": {
+          "bankDetails": {
+            "accountNumber": "1234567890",
+            "ifscCode": "ABCD0001234",
+            "accountHolderName": "Jane Smith",
+            "bankName": "State Bank of India"
+          }
+        },
+        "userPaymentMethods": {
+          "upiId": null,
+          "bankDetails": {
+            "accountNumber": "1234567890",
+            "ifscCode": "ABCD0001234",
+            "accountHolderName": "Jane Smith",
+            "bankName": "State Bank of India"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2.2 APPROVE WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/admin/mlm/withdrawal/approve
+Description: Approve a withdrawal request
+
+Request:
+```
+POST /api/admin/mlm/withdrawal/approve HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "withdrawalId": "60d5ec9af11ab8345678abcd",
+  "transactionId": "TXN123456"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal approved successfully",
+  "data": {
+    "withdrawal": {
+      "amount": 150,
+      "requestDate": "2023-06-25T12:00:00.000Z",
+      "status": "approved",
+      "paymentMethod": "upi",
+      "paymentDetails": {
+        "upiId": "user@upi"
+      },
+      "processedDate": "2023-06-26T12:00:00.000Z",
+      "transactionId": "TXN123456"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+2.3 REJECT WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/admin/mlm/withdrawal/reject
+Description: Reject a withdrawal request
+
+Request:
+```
+POST /api/admin/mlm/withdrawal/reject HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "withdrawalId": "60d5ec9af11ab8345678abcd",
+  "reason": "Invalid payment details"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal rejected successfully",
+  "data": {
+    "withdrawal": {
+      "amount": 150,
+      "requestDate": "2023-06-25T12:00:00.000Z",
+      "status": "rejected",
+      "paymentMethod": "upi",
+      "paymentDetails": {
+        "upiId": "user@upi"
+      },
+      "processedDate": "2023-06-26T12:00:00.000Z",
+      "rejectionReason": "Invalid payment details"
+    },
+    "refundedAmount": 150,
+    "newBalance": 300
+  }
+}
+```
+
+--------------------------------------------------
+WITHDRAWAL SYSTEM OVERVIEW
+--------------------------------------------------
+
+The withdrawal system allows users to request withdrawals from their income wallet with the following features:
+
+1. Payment Methods:
+   - UPI: Users can provide their UPI ID for quick transfers
+   - Bank Transfer: Users can provide complete bank account details
+
+2. User Requirements:
+   - Active subscription
+   - Active TPIN
+   - Minimum withdrawal amount: ₹150
+   - Sufficient balance in income wallet
+
+3. Withdrawal Process:
+   - User submits withdrawal request with payment details
+   - Amount is deducted from user's available balance
+   - Admin reviews the request
+   - Admin approves with transaction ID or rejects with reason
+   - If rejected, amount is refunded to user's wallet
+
+4. Payment Details Storage:
+   - Payment methods are saved in user profile for future use
+   - Each withdrawal request contains specific payment details used for that transaction
+
+5. Admin Dashboard Features:
+   - View all pending withdrawal requests with user details
+   - See payment method and complete payment details for each request
+   - Process withdrawals by approving or rejecting with appropriate information

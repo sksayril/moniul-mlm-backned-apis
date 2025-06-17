@@ -1,0 +1,166 @@
+==============================================
+API DOCUMENTATION - FULL API REFERENCE
+==============================================
+
+BASE URL: http://localhost:3100
+
+TABLE OF CONTENTS:
+
+1. AUTHENTICATION APIS
+   1.1 User Signup
+   1.2 User Signin
+   1.3 Get Current User
+   1.4 Update User Profile
+
+2. SUBSCRIPTION APIS
+   2.1 Request Subscription
+   2.2 Get Subscription Status
+   2.3 Request TPIN
+   2.4 Get TPIN Status
+   2.5 Access User Profile
+   2.6 Access Premium Content
+
+3. ADMIN APIS
+   3.1 Get All Users
+   3.2 Get Single User
+   3.3 Get Pending Subscriptions
+   3.4 Approve Subscription
+   3.5 Reject Subscription
+   3.6 Get Pending TPIN Requests
+   3.7 Approve TPIN Request
+   3.8 Reject TPIN Request
+
+4. ADMIN AUTHENTICATION APIS
+   4.1 Register Admin User
+   4.2 Admin Login
+
+5. MLM USER APIS
+   5.1 Generate Referral Code
+   5.2 Join Using Referral Code
+   5.3 Get Referral Dashboard
+   5.4 Purchase Trading Package
+   5.5 Request Withdrawal
+   5.6 Get Withdrawal History
+
+6. MLM ADMIN APIS
+   6.1 Get Pending Trading Packages
+   6.2 Approve Trading Package
+   6.3 Reject Trading Package
+   6.4 Get Pending Withdrawals
+   6.5 Approve Withdrawal
+   6.6 Reject Withdrawal
+   6.7 Get MLM Metrics
+
+----------------------------------------------
+HOW TO USE THE API
+----------------------------------------------
+
+1. User Flow:
+   - Register using signup API
+   - Login to get JWT token
+   - Request subscription with payment details
+   - Wait for admin approval
+   - Request TPIN after subscription is activated
+   - Wait for admin approval of TPIN
+   - Access premium content with active TPIN
+
+2. Admin Flow:
+   - Login as admin
+   - View pending subscription requests
+   - Approve/reject subscriptions
+   - View pending TPIN requests
+   - Approve/reject TPIN requests
+
+3. Authentication:
+   - For protected routes, include the token in the Authorization header
+   - Format: "Authorization: Bearer YOUR_JWT_TOKEN"
+
+4. Error Handling:
+   - All APIs return consistent error formats
+   - Check "status" field for "success" or "error"
+   - Error responses include descriptive messages
+
+For detailed request/response examples for each API, please refer to:
+- APDOCS_AUTH.txt - Authentication API examples
+- APDOCS_SUBSCRIPTION.txt - Subscription and TPIN API examples
+- APDOCS_ADMIN.txt - Admin API examples
+- APDOCS_ADMIN_AUTH.txt - Admin registration and login examples
+- APDOCS_MLM.txt - MLM referral system and income APIs
+
+----------------------------------------------
+TESTING THE APIS
+----------------------------------------------
+
+You can test these APIs using tools like:
+- Postman
+- curl
+- Any HTTP client library
+
+Example curl commands:
+
+1. Signup:
+```
+curl -X POST http://localhost:3100/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test User","email":"test@example.com","password":"password123"}'
+```
+
+2. Login:
+```
+curl -X POST http://localhost:3100/api/auth/signin \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+```
+
+3. Request Subscription (with file upload - requires form data):
+```
+curl -X POST http://localhost:3100/api/subscription/request \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -F "paymentId=PAYMENT123" \
+  -F "amount=99.99" \
+  -F "currency=USD" \
+  -F "plan=premium" \
+  -F "screenshot=@/path/to/screenshot.jpg"
+```
+
+4. Request TPIN (after subscription is approved):
+```
+curl -X POST http://localhost:3100/api/subscription/tpin/request \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+----------------------------------------------
+SECURITY CONSIDERATIONS
+----------------------------------------------
+
+1. Always use HTTPS in production environments
+2. JWT tokens expire after 30 days by default
+3. Password is hashed before storage
+4. Payment details and screenshots should be handled securely
+5. TPIN values are only exposed to authorized users
+
+----------------------------------------------
+DATA MODELS
+----------------------------------------------
+
+1. User Model:
+   - name: String (required)
+   - email: String (required, unique)
+   - password: String (required, hashed)
+   - role: String (user/admin)
+   - subscription: Object (status, expiry, plan)
+   - tpin: Object (value, active status, request date)
+   - paymentDetails: Array of payment objects
+   - timestamps: createdAt, updatedAt
+
+2. Payment Object:
+   - paymentId: String
+   - amount: Number
+   - currency: String
+   - status: String (pending/verified/rejected)
+   - screenshot: String (file path)
+   - date: Date
+   - rejectionReason: String (optional)
+
+For more detailed implementation examples, please check the individual APDOCS files.

@@ -1,0 +1,273 @@
+==============================================
+API DOCUMENTATION - SUBSCRIPTION ENDPOINTS
+==============================================
+
+BASE URL: http://localhost:3100
+
+--------------------------------------------------
+1. REQUEST SUBSCRIPTION
+--------------------------------------------------
+Endpoint: POST /api/subscription/request
+Description: Request a subscription by uploading payment details and screenshot
+
+Request:
+```
+POST /api/subscription/request HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: multipart/form-data
+
+form-data:
+- paymentId: "PAYMENT123456"
+- amount: 99.99
+- currency: "USD"
+- plan: "premium"
+- screenshot: [file upload]
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Subscription request submitted successfully. Please wait for admin approval.",
+  "data": {
+    "paymentDetails": {
+      "paymentId": "PAYMENT123456",
+      "amount": 99.99,
+      "currency": "USD",
+      "status": "pending",
+      "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+      "date": "2023-06-25T12:00:00.000Z",
+      "_id": "60d5ec9af11ab87654321098"
+    }
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Please upload payment screenshot"
+}
+```
+
+--------------------------------------------------
+2. GET SUBSCRIPTION STATUS
+--------------------------------------------------
+Endpoint: GET /api/subscription/status
+Description: Check current subscription status and pending payments
+
+Request:
+```
+GET /api/subscription/status HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "subscription": {
+      "active": true,
+      "expiryDate": "2024-06-25T12:00:00.000Z",
+      "plan": "premium"
+    },
+    "pendingPayments": []
+  }
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Not authorized to access this route"
+}
+```
+
+--------------------------------------------------
+3. REQUEST TPIN
+--------------------------------------------------
+Endpoint: POST /api/subscription/tpin/request
+Description: Request a TPIN after having an active subscription
+
+Request:
+```
+POST /api/subscription/tpin/request HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "TPIN request submitted successfully. Please wait for admin approval.",
+  "data": {
+    "requestDate": "2023-06-25T14:30:00.000Z"
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "You must have an active subscription to request a TPIN"
+}
+```
+
+or 
+
+```
+{
+  "status": "error",
+  "message": "You already have a pending TPIN request"
+}
+```
+
+--------------------------------------------------
+4. GET TPIN STATUS
+--------------------------------------------------
+Endpoint: GET /api/subscription/tpin/status
+Description: Check the status of TPIN request or active TPIN
+
+Request:
+```
+GET /api/subscription/tpin/status HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK - TPIN Active):
+```
+{
+  "status": "success",
+  "data": {
+    "tpin": {
+      "active": true,
+      "requestDate": "2023-06-25T14:30:00.000Z",
+      "value": "123456"
+    }
+  }
+}
+```
+
+Success Response (200 OK - TPIN Pending):
+```
+{
+  "status": "success",
+  "data": {
+    "tpin": {
+      "active": false,
+      "requestDate": "2023-06-25T14:30:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Not authorized to access this route"
+}
+```
+
+--------------------------------------------------
+5. ACCESS USER PROFILE (USERS ROUTE)
+--------------------------------------------------
+Endpoint: GET /api/users/profile
+Description: Get detailed user profile information
+
+Request:
+```
+GET /api/users/profile HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "user",
+      "subscription": {
+        "active": true,
+        "expiryDate": "2024-06-25T12:00:00.000Z",
+        "plan": "premium"
+      },
+      "tpin": {
+        "active": true,
+        "requestDate": "2023-06-25T14:30:00.000Z",
+        "value": "123456"
+      },
+      "paymentDetails": [
+        {
+          "paymentId": "PAYMENT123456",
+          "amount": 99.99,
+          "currency": "USD",
+          "status": "verified",
+          "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+          "date": "2023-06-25T12:00:00.000Z",
+          "_id": "60d5ec9af11ab87654321098"
+        }
+      ]
+    }
+  }
+}
+```
+
+--------------------------------------------------
+6. ACCESS PREMIUM CONTENT (WITH TPIN)
+--------------------------------------------------
+Endpoint: GET /api/users/premium-content
+Description: Access premium content (requires active subscription and TPIN)
+
+Request:
+```
+GET /api/users/premium-content HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "You have successfully accessed premium content",
+  "data": {
+    "content": "This is exclusive premium content only available to users with active subscriptions and TPINs"
+  }
+}
+```
+
+Error Response (403 Forbidden - No Active Subscription):
+```
+{
+  "status": "error",
+  "message": "This action requires an active subscription"
+}
+```
+
+Error Response (403 Forbidden - No Active TPIN):
+```
+{
+  "status": "error",
+  "message": "This action requires an active TPIN"
+}
+```
+
+Note: To use these APIs, you must:
+1. Have a valid JWT token (obtained from login)
+2. Have an active subscription for TPIN-related endpoints
+3. Have an active TPIN for premium content endpoints
