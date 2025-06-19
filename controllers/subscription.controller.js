@@ -62,6 +62,21 @@ exports.requestTPINs = async (req, res) => {
       // Save payment details to user
       const user = await User.findById(req.user.id);
       
+      if (!user) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'User not found'
+        });
+      }
+      
+      // Initialize arrays if they don't exist
+      if (!user.paymentDetails) {
+        user.paymentDetails = [];
+      }
+      if (!user.tpins) {
+        user.tpins = [];
+      }
+      
       // Create URL path for the screenshot
       const relativePath = `/uploads/payments/${fileName}`;
       
@@ -108,6 +123,43 @@ exports.requestTPINs = async (req, res) => {
 exports.getTpinStatus = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Initialize empty tpins array if user doesn't have any
+    if (!user.tpins || user.tpins.length === 0) {
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          summary: {
+            total: 0,
+            pending: 0,
+            approved: 0,
+            active: 0,
+            used: 0,
+            rejected: 0,
+          },
+          tpins: {
+            all: [],
+            pending: [],
+            active: [],
+            used: [],
+            rejected: []
+          },
+          payments: {
+            pending: user.paymentDetails ? user.paymentDetails.filter(payment => payment.status === 'pending') : [],
+            verified: user.paymentDetails ? user.paymentDetails.filter(payment => payment.status === 'verified') : [],
+            rejected: user.paymentDetails ? user.paymentDetails.filter(payment => payment.status === 'rejected') : []
+          },
+          isActive: user.isActive
+        }
+      });
+    }
     
     // Group TPINs by status
     const pendingTpins = user.tpins.filter(tpin => tpin.status === 'pending');
@@ -157,9 +209,9 @@ exports.getTpinStatus = async (req, res) => {
           rejected: rejectedTpins.map(formatTpin)
         },
         payments: {
-          pending: user.paymentDetails.filter(payment => payment.status === 'pending'),
-          verified: user.paymentDetails.filter(payment => payment.status === 'verified'),
-          rejected: user.paymentDetails.filter(payment => payment.status === 'rejected')
+          pending: user.paymentDetails ? user.paymentDetails.filter(payment => payment.status === 'pending') : [],
+          verified: user.paymentDetails ? user.paymentDetails.filter(payment => payment.status === 'verified') : [],
+          rejected: user.paymentDetails ? user.paymentDetails.filter(payment => payment.status === 'rejected') : []
         },
         isActive: user.isActive
       }
@@ -178,12 +230,19 @@ exports.getPaymentStatus = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
     res.status(200).json({
       status: 'success',
       data: {
-        pendingPayments: user.paymentDetails.filter(payment => payment.status === 'pending'),
-        verifiedPayments: user.paymentDetails.filter(payment => payment.status === 'verified'),
-        rejectedPayments: user.paymentDetails.filter(payment => payment.status === 'rejected')
+        pendingPayments: user.paymentDetails ? user.paymentDetails.filter(payment => payment.status === 'pending') : [],
+        verifiedPayments: user.paymentDetails ? user.paymentDetails.filter(payment => payment.status === 'verified') : [],
+        rejectedPayments: user.paymentDetails ? user.paymentDetails.filter(payment => payment.status === 'rejected') : []
       }
     });
   } catch (err) {
@@ -209,6 +268,21 @@ exports.transferTpin = async (req, res) => {
     
     // Find the sender (current user)
     const sender = await User.findById(req.user.id);
+    
+    if (!sender) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Check if user has TPINs
+    if (!sender.tpins || sender.tpins.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'You do not have any TPINs to transfer'
+      });
+    }
     
     // Find the TPIN to transfer
     const tpinIndex = sender.tpins.findIndex(
