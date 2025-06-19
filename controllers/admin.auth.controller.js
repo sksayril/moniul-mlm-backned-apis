@@ -2,9 +2,12 @@ const User = require('../models/user.model');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
+// JWT secret from environment variable or default
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-should-be-in-env-file';
+
 // Helper function to generate JWT
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+  return jwt.sign({ id }, JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '30d'
   });
 };
@@ -31,6 +34,19 @@ exports.registerAdmin = async (req, res) => {
       });
     }
     
+    // Generate admin userId with format ADMIN + random numbers
+    const randomNumber = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+    const userId = `ADMIN${randomNumber}`;
+    
+    // Check if userId already exists
+    const existingUserId = await User.findOne({ userId });
+    if (existingUserId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Generated userId already exists. Please try again.'
+      });
+    }
+    
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -39,6 +55,7 @@ exports.registerAdmin = async (req, res) => {
     const admin = await User.create({
       name,
       email,
+      userId,
       password: hashedPassword,
       role: 'admin'
     });
@@ -66,23 +83,32 @@ exports.registerAdmin = async (req, res) => {
 // Login admin
 exports.loginAdmin = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, userId, password } = req.body;
     
-    // Check if email and password exist
-    if (!email || !password) {
+    // Check if email/userId and password exist
+    if ((!email && !userId) || !password) {
       return res.status(400).json({
         status: 'error',
-        message: 'Please provide email and password'
+        message: 'Please provide email/userId and password'
       });
     }
     
+    // Find admin by email or userId
+    const query = {};
+    if (email) {
+      query.email = email;
+    } else if (userId) {
+      query.userId = userId;
+    }
+    query.role = 'admin';
+    
     // Check if user exists & is an admin & password is correct
-    const admin = await User.findOne({ email, role: 'admin' }).select('+password');
+    const admin = await User.findOne(query).select('+password');
     
     if (!admin || !(await bcrypt.compare(password, admin.password))) {
       return res.status(401).json({
         status: 'error',
-        message: 'Incorrect email or password, or not an admin account'
+        message: 'Incorrect credentials or not an admin account'
       });
     }
     

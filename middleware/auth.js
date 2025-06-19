@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
+// JWT secret from environment variable or default
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-should-be-in-env-file';
+
 // Middleware to protect routes
 exports.protect = async (req, res, next) => {
   try {
@@ -19,7 +22,7 @@ exports.protect = async (req, res, next) => {
     }
     
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     
     // Find user with the id in the token
     const user = await User.findById(decoded.id);
@@ -33,6 +36,8 @@ exports.protect = async (req, res, next) => {
     
     // Add user to request object
     req.user = user;
+    // Set userId to the MongoDB _id for convenience
+    req.user.userId = user._id;
     next();
   } catch (err) {
     return res.status(401).json({
@@ -56,24 +61,79 @@ exports.restrictTo = (...roles) => {
   };
 };
 
-// Middleware to check if user has active subscription
-exports.requireActiveSubscription = (req, res, next) => {
-  if (!req.user.subscription.active) {
+// Middleware to check if user account is active
+exports.requireActiveAccount = (req, res, next) => {
+  if (!req.user.isActive) {
     return res.status(403).json({
       status: 'error',
-      message: 'This action requires an active subscription'
+      message: 'This action requires an active account. Please activate your account using a TPIN.'
     });
   }
   
   next();
 };
 
-// Middleware to check if user has active TPIN
-exports.requireActiveTpin = (req, res, next) => {
-  if (!req.user.tpin.active) {
-    return res.status(403).json({
+// Middleware to check if user has at least one available TPIN and mark one as used
+exports.requireAvailableTPIN = async (req, res, next) => {
+  try {
+    // Check if user has any approved and unused TPINs
+    const availableTpinIndex = req.user.tpins.findIndex(tpin => 
+      tpin.status === 'approved' && !tpin.isUsed
+    );
+
+    if (availableTpinIndex === -1) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'This action requires at least one available TPIN. Please purchase a TPIN first.'
+      });
+    }
+    
+    // Mark the TPIN as used
+    req.user.tpins[availableTpinIndex].isUsed = true;
+    req.user.tpins[availableTpinIndex].usedAt = Date.now();
+    
+    // Save the updated user document
+    await req.user.save();
+    
+    // Add the used TPIN to the request for reference
+    req.usedTpin = req.user.tpins[availableTpinIndex];
+    
+    next();
+  } catch (err) {
+    return res.status(500).json({
       status: 'error',
-      message: 'This action requires an active TPIN'
+      message: 'Error processing TPIN usage',
+      error: err.message
+    });
+  }
+};
+
+// Middleware to check if user has sufficient balance for withdrawal
+exports.requireSufficientBalance = (req, res, next) => {
+  // Get amount from request body
+  const { amount } = req.body;
+  
+  // Check if amount is provided
+  if (!amount) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Please provide withdrawal amount'
+    });
+  }
+  
+  // Minimum withdrawal is ₹150
+  if (amount < 150) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Minimum withdrawal amount is ₹150'
+    });
+  }
+  
+  // Check if user has enough balance
+  if (req.user.incomeWallet.balance < amount) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Insufficient balance for withdrawal'
     });
   }
   

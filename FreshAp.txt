@@ -1,0 +1,1685 @@
+==============================================
+API DOCUMENTATION - COMPLETE SYSTEM ENDPOINTS
+==============================================
+
+BASE URL: http://localhost:3100
+
+TABLE OF CONTENTS:
+1. User Authentication APIs
+2. TPIN APIs
+3. Admin APIs
+4. MLM APIs
+5. Payment APIs
+6. Referral APIs
+
+##############################################
+#           USER AUTHENTICATION APIs         #
+##############################################
+
+--------------------------------------------------
+1. USER SIGNUP
+--------------------------------------------------
+Endpoint: POST /api/auth/signup
+Description: Register a new user account with referral code
+
+Request:
+```
+POST /api/auth/signup HTTP/1.1
+Host: localhost:3100
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123",
+  "referralCode": "LIFE10001"  // Optional: Join MLM network during signup
+}
+```
+
+Success Response (201 Created):
+```
+{
+  "status": "success",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "userId": "LIFE10001",  // Automatically generated userId in LIFE + number format
+      "role": "user",
+      "isActive": false,      // Account needs to be activated with TPIN
+      "tpins": [],           // User needs to purchase TPINs
+      "paymentDetails": [],
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:00:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "User already exists"
+}
+```
+
+--------------------------------------------------
+2. USER SIGNIN
+--------------------------------------------------
+Endpoint: POST /api/auth/signin
+Description: Login an existing user using user ID
+
+Request:
+```
+POST /api/auth/signin HTTP/1.1
+Host: localhost:3100
+Content-Type: application/json
+
+{
+  "userId": "LIFE10001",       // User ID is used for login instead of email
+  "password": "securepassword123"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "userId": "LIFE10001",
+      "role": "user",
+      "isActive": false,
+      "tpins": [],
+      "paymentDetails": [],
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:30:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Incorrect user ID or password"
+}
+```
+
+--------------------------------------------------
+3. GET CURRENT USER PROFILE
+--------------------------------------------------
+Endpoint: GET /api/auth/me
+Description: Retrieve the profile of currently logged-in user
+
+Request:
+```
+GET /api/auth/me HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "userId": "LIFE10001",
+      "role": "user",
+      "isActive": true,
+      "tpins": [
+        {
+          "code": "A1B2C3",
+          "isUsed": true,
+          "purchaseDate": "2023-06-25T12:00:00.000Z",
+          "activationDate": "2023-06-25T12:30:00.000Z",
+          "status": "approved"
+        },
+        {
+          "code": "D4E5F6",
+          "isUsed": false,
+          "purchaseDate": "2023-06-25T12:00:00.000Z",
+          "status": "approved"
+        }
+      ],
+      "paymentDetails": [],
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:30:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Not authorized to access this route"
+}
+```
+
+--------------------------------------------------
+4. UPDATE USER PROFILE
+--------------------------------------------------
+Endpoint: POST /api/auth/updateMe
+Description: Update the currently logged-in user's profile
+
+Request:
+```
+POST /api/auth/updateMe HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "name": "John Updated Doe"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Updated Doe",
+      "email": "john@example.com",
+      "userId": "LIFE10001",
+      "role": "user",
+      "isActive": true,
+      "tpins": [...],
+      "paymentDetails": [],
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:05:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Not authorized to access this route"
+}
+```
+
+--------------------------------------------------
+5. ACTIVATE ACCOUNT WITH TPIN
+--------------------------------------------------
+Endpoint: POST /api/auth/activate
+Description: Activate user account using an approved TPIN
+
+Request:
+```
+POST /api/auth/activate HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "tpinCode": "A1B2C3"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Account activated successfully with ₹10 self-income added",
+  "data": {
+    "isActive": true,
+    "incomeAdded": 10,
+    "currentBalance": 10
+  }
+}
+```
+
+Income Distribution on TPIN Activation:
+- Self Income: ₹10 (for the user activating TPIN)
+- Direct Referral Income: ₹20 (for immediate referrer)
+- Matrix Income: Distributed across 7 levels based on matrix structure
+
+--------------------------------------------------
+6. GET MATRIX STRUCTURE
+--------------------------------------------------
+Endpoint: GET /api/mlm/matrix/structure
+Description: Get detailed matrix structure and income information for user
+
+Request:
+```
+GET /api/mlm/matrix/structure HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "userInfo": {
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "isActive": true,
+      "rank": "Manager",
+      "teamSize": 25
+    },
+    "incomeWallet": {
+      "balance": 5000,
+      "selfIncome": 10,
+      "directIncome": 400,
+      "matrixIncome": 3750,
+      "rankRewards": 500,
+      "totalEarnings": 4660,
+      "withdrawnAmount": 1000,
+      "lastUpdated": "2023-06-30T12:00:00.000Z"
+    },
+    "matrixStructure": {
+      "1": {
+        "capacity": 5,
+        "currentCount": 3,
+        "incomePerMember": 50,
+        "totalPotentialIncome": 250,
+        "members": [
+          {
+            "userId": "60d5ec9af11ab83456789013",
+            "name": "Jane Smith",
+            "userIdCode": "LIFE10002",
+            "email": "jane@example.com",
+            "isActive": true,
+            "addedAt": "2023-06-25T14:30:00.000Z"
+          }
+          // More level 1 members...
+        ]
+      },
+      "2": {
+        "capacity": 25,
+        "currentCount": 8,
+        "incomePerMember": 125,
+        "totalPotentialIncome": 3125,
+        "members": [
+          // Level 2 members...
+        ]
+      }
+      // More levels...
+    },
+    "matrixSummary": {
+      "totalLevels": 7,
+      "totalMatrixIncome": 3750,
+      "totalDownlineMembers": 15,
+      "activationIncome": 10,
+      "directReferralIncome": 400
+    },
+    "recentTransactions": [
+      {
+        "type": "matrix_income",
+        "amount": 125,
+        "level": 2,
+        "fromUser": {
+          "name": "Robert Johnson",
+          "userId": "LIFE10005"
+        },
+        "date": "2023-06-29T15:30:00.000Z",
+        "description": "Matrix Level 2 income from user activation"
+      }
+      // More recent transactions...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+7. GET INCOME BREAKDOWN
+--------------------------------------------------
+Endpoint: GET /api/mlm/income/breakdown
+Description: Get detailed income breakdown with transaction analysis
+
+Request:
+```
+GET /api/mlm/income/breakdown HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalEarnings": 4660,
+    "currentBalance": 3660,
+    "withdrawnAmount": 1000,
+    "incomeBreakdown": {
+      "selfIncome": 10,
+      "directIncome": 400,
+      "matrixIncome": 3750,
+      "rankRewards": 500,
+      "fxTradingIncome": 0
+    },
+    "incomeByType": {
+      "self_income": {
+        "totalAmount": 10,
+        "count": 1,
+        "transactions": [
+          {
+            "type": "self_income",
+            "amount": 10,
+            "date": "2023-06-25T12:00:00.000Z",
+            "description": "TPIN activation income"
+          }
+        ]
+      },
+      "direct_income": {
+        "totalAmount": 400,
+        "count": 20,
+        "transactions": [
+          // Direct referral transactions...
+        ]
+      },
+      "matrix_income": {
+        "totalAmount": 3750,
+        "count": 15,
+        "transactions": [
+          // Matrix income transactions...
+        ]
+      }
+    },
+    "matrixIncomeByLevel": {
+      "1": {
+        "totalAmount": 150,
+        "count": 3
+      },
+      "2": {
+        "totalAmount": 1000,
+        "count": 8
+      },
+      "3": {
+        "totalAmount": 2500,
+        "count": 4
+      }
+      // More levels...
+    },
+    "lastUpdated": "2023-06-30T12:00:00.000Z"
+  }
+}
+```
+
+##############################################
+#              TPIN APIs                     #
+##############################################
+
+--------------------------------------------------
+1. PURCHASE TPIN
+--------------------------------------------------
+Endpoint: POST /api/tpin/purchase
+Description: Purchase TPINs by uploading payment details and screenshot
+
+Request:
+```
+POST /api/tpin/purchase HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: multipart/form-data
+
+form-data:
+- paymentId: "PAYMENT123456"
+- amount: 99.99
+- currency: "USD"
+- quantity: 5 // Number of TPINs to purchase
+- screenshot: [file upload]
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "TPIN purchase request submitted successfully. Please wait for admin approval.",
+  "data": {
+    "paymentDetails": {
+      "paymentId": "PAYMENT123456",
+      "amount": 99.99,
+      "currency": "USD",
+      "status": "pending",
+      "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+      "date": "2023-06-25T12:00:00.000Z",
+      "_id": "60d5ec9af11ab87654321098"
+    },
+    "requestedQuantity": 5
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Please upload payment screenshot"
+}
+```
+
+--------------------------------------------------
+2. GET TPIN STATUS
+--------------------------------------------------
+Endpoint: GET /api/tpin/status
+Description: Check status of all TPINs (pending, approved, rejected, and used)
+
+Request:
+```
+GET /api/tpin/status HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "summary": {
+      "total": 4,
+      "pending": 1,
+      "approved": 2,
+      "rejected": 1,
+      "used": 1
+    },
+    "tpins": {
+      "all": [
+        {
+          "id": "60d5ec9af11ab87654321001",
+        "code": "A1B2C3",
+        "isUsed": true,
+        "purchaseDate": "2023-06-25T12:00:00.000Z",
+        "activationDate": "2023-06-25T14:30:00.000Z",
+          "status": "approved",
+          "usedAt": "2023-06-26T10:15:00.000Z"
+      },
+      {
+          "id": "60d5ec9af11ab87654321002",
+        "code": "D4E5F6",
+        "isUsed": false,
+        "purchaseDate": "2023-06-25T12:00:00.000Z",
+        "status": "approved"
+      },
+      {
+          "id": "60d5ec9af11ab87654321003",
+          "code": "G7H8I9",
+          "isUsed": false,
+        "purchaseDate": "2023-06-26T15:45:00.000Z",
+        "status": "pending"
+      },
+      {
+          "id": "60d5ec9af11ab87654321004",
+          "code": "J0K1L2",
+          "isUsed": false,
+        "purchaseDate": "2023-06-26T15:45:00.000Z",
+        "status": "rejected",
+          "rejectionReason": "Invalid payment details"
+        }
+      ],
+      "pending": [],
+      "active": [],
+      "used": [],
+      "rejected": []
+    },
+    "payments": {
+      "pending": [],
+      "verified": [],
+      "rejected": []
+    }
+  }
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Not authorized to access this route"
+}
+```
+
+--------------------------------------------------
+3. GET PAYMENT STATUS
+--------------------------------------------------
+Endpoint: GET /api/tpin/payments
+Description: Check status of all TPIN payment requests
+
+Request:
+```
+GET /api/tpin/payments HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "pendingPayments": [
+      {
+        "paymentId": "PAYMENT789012",
+        "amount": 49.99,
+        "currency": "USD",
+        "status": "pending",
+        "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624712400000-payment.jpg",
+        "date": "2023-06-26T12:00:00.000Z"
+      }
+    ],
+    "verifiedPayments": [
+      {
+        "paymentId": "PAYMENT123456",
+        "amount": 99.99,
+        "currency": "USD",
+        "status": "verified",
+        "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+        "date": "2023-06-25T12:00:00.000Z"
+      }
+    ],
+    "rejectedPayments": []
+  }
+}
+```
+
+--------------------------------------------------
+4. TRANSFER TPIN
+--------------------------------------------------
+Endpoint: POST /api/tpin/transfer
+Description: Transfer an unused TPIN to another user using userId
+
+Request:
+```
+POST /api/tpin/transfer HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "tpinCode": "D4E5F6",
+  "recipientUserId": "LIFE10002"  
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "TPIN transferred successfully",
+  "data": {
+    "tpin": {
+      "code": "D4E5F6",
+      "isUsed": false,
+      "purchaseDate": "2023-06-25T12:00:00.000Z",
+      "status": "approved"
+    },
+    "recipient": {
+      "userId": "LIFE10002",
+      "name": "Jane Smith"
+    }
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "TPIN is not available for transfer (already used or pending)"
+}
+```
+
+Error Response (404 Not Found):
+```
+{
+  "status": "error",
+  "message": "Recipient user not found"
+}
+```
+
+##############################################
+#              ADMIN APIs                    #
+##############################################
+
+--------------------------------------------------
+1. GET ALL USERS
+--------------------------------------------------
+Endpoint: GET /api/admin/users
+Description: Get a list of all users (admin only)
+
+Request:
+```
+GET /api/admin/users HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 50,
+  "data": {
+    "users": [
+      {
+        "_id": "60d5ec9af11ab83456789012",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "userId": "LIFE10001",
+        "role": "user",
+        "isActive": true,
+        "createdAt": "2023-06-25T12:00:00.000Z",
+        "updatedAt": "2023-06-25T12:30:00.000Z"
+      },
+      // More users...
+    ]
+  }
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Not authorized to access this route"
+}
+```
+
+--------------------------------------------------
+2. GET SPECIFIC USER
+--------------------------------------------------
+Endpoint: GET /api/admin/users/:id
+Description: Get details of a specific user by ID (admin only)
+
+Request:
+```
+GET /api/admin/users/60d5ec9af11ab83456789012 HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "userId": "LIFE10001",
+      "role": "user",
+      "isActive": true,
+      "tpins": [
+        {
+          "code": "A1B2C3",
+          "isUsed": true,
+          "purchaseDate": "2023-06-25T12:00:00.000Z",
+          "activationDate": "2023-06-25T14:30:00.000Z",
+          "status": "approved"
+        }
+      ],
+      "paymentDetails": [],
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:30:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (404 Not Found):
+```
+{
+  "status": "error",
+  "message": "No user found with that ID"
+}
+```
+
+--------------------------------------------------
+3. GET PENDING TPIN PAYMENT REQUESTS
+--------------------------------------------------
+Endpoint: GET /api/admin/tpin/pending
+Description: Get a list of pending TPIN payment requests (admin only)
+
+Request:
+```
+GET /api/admin/tpin/pending HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "pendingRequests": [
+      {
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "userIdCode": "LIFE10001",
+        "paymentId": "PAYMENT123456",
+        "paymentDetails": {
+          "paymentId": "PAYMENT123456",
+          "amount": 99.99,
+          "currency": "USD",
+          "status": "pending",
+          "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+          "date": "2023-06-25T12:00:00.000Z"
+        },
+        "screenshotPath": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+        "requestedQuantity": 5
+      },
+      // More pending requests...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+4. APPROVE TPIN REQUEST
+--------------------------------------------------
+Endpoint: POST /api/admin/tpin/approve
+Description: Approve a pending TPIN request and generate TPINs (admin only)
+
+Request:
+```
+POST /api/admin/tpin/approve HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "paymentId": "PAYMENT123456"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "TPIN purchase approved successfully",
+  "data": {
+    "tpins": [
+      {
+        "code": "A1B2C3",
+        "isUsed": false,
+        "purchaseDate": "2023-06-25T12:00:00.000Z",
+        "status": "approved"
+      },
+      // More approved TPINs...
+    ],
+    "payment": {
+      "paymentId": "PAYMENT123456",
+      "status": "verified",
+      "_id": "60d5ec9af11ab87654321098"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+5. REJECT TPIN REQUEST
+--------------------------------------------------
+Endpoint: POST /api/admin/tpin/reject
+Description: Reject a pending TPIN request (admin only)
+
+Request:
+```
+POST /api/admin/tpin/reject HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "paymentId": "PAYMENT123456",
+  "reason": "Invalid payment details provided"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "TPIN request rejected successfully",
+  "data": {
+    "payment": {
+      "paymentId": "PAYMENT123456",
+      "status": "rejected",
+      "rejectionReason": "Invalid payment details provided"
+    }
+  }
+}
+```
+
+##############################################
+#              MLM APIs                      #
+##############################################
+
+--------------------------------------------------
+1. GET REFERRAL DASHBOARD
+--------------------------------------------------
+Endpoint: GET /api/mlm/dashboard
+Description: Get user's MLM referral dashboard information
+
+Request:
+```
+GET /api/mlm/dashboard HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "referralCode": "LIFE10001",
+    "totalReferrals": 5,
+    "directReferrals": 2,
+    "indirectReferrals": 3,
+    "totalEarnings": 350.00,
+    "availableBalance": 200.00,
+    "withdrawnAmount": 150.00,
+    "matrix": {
+      "level1": 2,
+      "level2": 3,
+      "level3": 0
+    },
+    "recentReferrals": [
+      {
+        "name": "Jane Smith",
+        "userId": "LIFE10002",
+        "date": "2023-06-26T14:30:00.000Z",
+        "level": 1
+      },
+      // More referrals...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2. JOIN WITH REFERRAL CODE
+--------------------------------------------------
+Endpoint: POST /api/mlm/referral/join
+Description: Join an MLM network using someone's referral code (requires active account)
+
+Request:
+```
+POST /api/mlm/referral/join HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "referralCode": "LIFE10001"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Successfully joined referral network",
+  "data": {
+    "referrer": "John Doe",
+    "referrerId": "LIFE10001"
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Invalid referral code"
+}
+```
+
+--------------------------------------------------
+3. REQUEST WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/mlm/withdrawal/request
+Description: Request a withdrawal from MLM earnings (requires active account and minimum balance of ₹150)
+
+Request:
+```
+POST /api/mlm/withdrawal/request HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "amount": 150,
+  "bankDetails": {
+    "bankName": "Example Bank",
+    "accountNumber": "1234567890",
+    "accountName": "John Doe"
+  }
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal request submitted successfully",
+  "data": {
+    "withdrawalId": "WITH123456",
+    "amount": 150.00,
+    "status": "pending",
+    "requestDate": "2023-06-27T10:15:00.000Z"
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Insufficient balance for withdrawal"
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Minimum withdrawal amount is ₹150"
+}
+```
+
+--------------------------------------------------
+4. GET WITHDRAWAL HISTORY
+--------------------------------------------------
+Endpoint: GET /api/mlm/withdrawal/history
+Description: Get history of withdrawal requests
+
+Request:
+```
+GET /api/mlm/withdrawal/history HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "withdrawals": [
+      {
+        "withdrawalId": "WITH123456",
+        "amount": 100.00,
+        "status": "approved",
+        "requestDate": "2023-06-27T10:15:00.000Z",
+        "processDate": "2023-06-28T14:30:00.000Z",
+        "bankDetails": {
+          "bankName": "Example Bank",
+          "accountNumber": "1234567890",
+          "accountName": "John Doe"
+        }
+      },
+      {
+        "withdrawalId": "WITH789012",
+        "amount": 50.00,
+        "status": "pending",
+        "requestDate": "2023-06-30T09:00:00.000Z",
+        "bankDetails": {
+          "bankName": "Example Bank",
+          "accountNumber": "1234567890",
+          "accountName": "John Doe"
+        }
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+5. GET MLM TEAM STRUCTURE
+--------------------------------------------------
+Endpoint: GET /api/mlm/team
+Description: Get detailed team structure with levels
+
+Request:
+```
+GET /api/mlm/team HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "teamSize": 12,
+    "directReferrals": 3,
+    "rank": "Manager",
+    "structure": {
+      "level1": [
+        {
+          "userId": "LIFE10002",
+          "name": "Jane Smith",
+          "isActive": true,
+          "joinDate": "2023-06-20T12:00:00.000Z",
+          "teamSize": 2
+        },
+        {
+          "userId": "LIFE10003",
+          "name": "Robert Johnson",
+          "isActive": true,
+          "joinDate": "2023-06-22T14:30:00.000Z",
+          "teamSize": 4
+        },
+        {
+          "userId": "LIFE10004",
+          "name": "Emily Davis",
+          "isActive": true,
+          "joinDate": "2023-06-25T10:15:00.000Z",
+          "teamSize": 1
+        }
+      ],
+      "level2": [/* Level 2 referrals */],
+      "level3": [/* Level 3 referrals */]
+    }
+  }
+}
+```
+
+--------------------------------------------------
+6. ADMIN: PENDING WITHDRAWALS
+--------------------------------------------------
+Endpoint: GET /api/mlm-admin/withdrawal/pending
+Description: Get list of pending withdrawal requests (admin only)
+
+Request:
+```
+GET /api/mlm-admin/withdrawal/pending HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "pendingWithdrawals": [
+      {
+        "userId": "60d5ec9af11ab83456789012",
+        "userIdCode": "LIFE10001",
+        "userName": "John Doe",
+        "withdrawalId": "WITH654321",
+        "amount": 50.00,
+        "requestDate": "2023-06-29T15:45:00.000Z",
+        "bankDetails": {
+          "bankName": "Example Bank",
+          "accountNumber": "1234567890",
+          "accountName": "John Doe"
+        }
+      },
+      // More pending withdrawals...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+6. ADMIN: APPROVE WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/mlm-admin/withdrawal/approve
+Description: Approve a withdrawal request (admin only)
+
+Request:
+```
+POST /api/mlm-admin/withdrawal/approve HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "withdrawalId": "WITH654321",
+  "transactionDetails": "Payment sent via bank transfer. Reference: REF123456"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal request approved successfully",
+  "data": {
+    "withdrawalId": "WITH654321",
+    "status": "approved",
+    "processDate": "2023-06-30T12:00:00.000Z",
+    "transactionDetails": "Payment sent via bank transfer. Reference: REF123456"
+  }
+}
+```
+
+--------------------------------------------------
+7. ADMIN: MLM METRICS
+--------------------------------------------------
+Endpoint: GET /api/mlm-admin/metrics
+Description: Get overall MLM metrics for admin dashboard (admin only)
+
+Request:
+```
+GET /api/mlm-admin/metrics HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalUsers": 500,
+    "activeUsers": 350,
+    "totalWithdrawals": 45000.00,
+    "pendingWithdrawals": 12500.00,
+    "topReferrers": [
+      {
+        "name": "John Doe",
+        "userId": "LIFE10001",
+        "referrals": 25,
+        "earnings": 3500.00
+      },
+      // More top referrers...
+    ],
+    "recentActivities": [
+      {
+        "type": "withdrawal",
+        "amount": 100.00,
+        "userId": "LIFE10001",
+        "status": "approved",
+        "date": "2023-06-30T12:00:00.000Z"
+      },
+      // More recent activities...
+    ]
+  }
+}
+```
+
+##############################################
+#              REFERRAL APIs                   #
+##############################################
+
+--------------------------------------------------
+1. GET REFERRAL LINK
+--------------------------------------------------
+Endpoint: GET /api/mlm/referral/link
+Description: Get user's referral link to share
+
+Request:
+```
+GET /api/mlm/referral/link HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "userId": "LIFE10001",
+    "referralCode": "LIFE10001",
+    "referralLink": "http://example.com/register?ref=LIFE10001"
+  }
+}
+```
+
+--------------------------------------------------
+2. GET DIRECT REFERRALS
+--------------------------------------------------
+Endpoint: GET /api/mlm/referral/direct
+Description: Get list of direct referrals
+
+Request:
+```
+GET /api/mlm/referral/direct HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 3,
+  "data": {
+    "directReferrals": [
+      {
+        "name": "Jane Smith",
+        "userId": "LIFE10002",
+        "isActive": true,
+        "joinDate": "2023-06-20T12:00:00.000Z",
+        "teamSize": 2
+      },
+      {
+        "name": "Robert Johnson",
+        "userId": "LIFE10003",
+        "isActive": true,
+        "joinDate": "2023-06-22T14:30:00.000Z",
+        "teamSize": 4
+      },
+      {
+        "name": "Emily Davis",
+        "userId": "LIFE10004",
+        "isActive": true,
+        "joinDate": "2023-06-25T10:15:00.000Z",
+        "teamSize": 1
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+3. GET REFERRAL INCOME
+--------------------------------------------------
+Endpoint: GET /api/mlm/referral/income
+Description: Get detailed breakdown of referral income
+
+Request:
+```
+GET /api/mlm/referral/income HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalEarnings": 350.00,
+    "availableBalance": 200.00,
+    "withdrawnAmount": 150.00,
+    "incomeBreakdown": {
+      "directIncome": 120.00,
+      "matrixIncome": 130.00,
+      "rankRewards": 100.00,
+      "selfIncome": 50.00
+    },
+    "recentTransactions": [
+      {
+        "type": "matrix_commission",
+        "amount": 10.00,
+        "from": "LIFE10005",
+        "level": 2,
+        "date": "2023-06-28T09:15:00.000Z"
+      },
+      {
+        "type": "direct_commission",
+        "amount": 20.00,
+        "from": "LIFE10006",
+        "date": "2023-06-27T14:30:00.000Z"
+      },
+      {
+        "type": "withdrawal",
+        "amount": -100.00,
+        "status": "completed",
+        "date": "2023-06-26T11:45:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+##############################################
+#           MATRIX MLM SYSTEM               #
+##############################################
+
+--------------------------------------------------
+1. TPIN ACTIVATION WITH MLM INCOME
+--------------------------------------------------
+Endpoint: POST /api/auth/activate
+Description: Activate account with TPIN and trigger MLM income distribution
+
+Request:
+```
+POST /api/auth/activate HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "tpinCode": "A1B2C3"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Account activated successfully with ₹10 self-income added",
+  "data": {
+    "isActive": true,
+    "incomeAdded": 10,
+    "currentBalance": 10
+  }
+}
+```
+
+Income Distribution on TPIN Activation:
+- Self Income: ₹10 (for the user activating TPIN)
+- Direct Referral Income: ₹20 (for immediate referrer)
+- Matrix Income: Distributed across 7 levels based on matrix structure
+
+--------------------------------------------------
+2. MATRIX INCOME STRUCTURE (7 LEVELS)
+--------------------------------------------------
+
+Matrix Level Structure:
+| Level | Capacity | Income per Member | Total Potential Income |
+|-------|----------|-------------------|------------------------|
+| 1st   | 5        | ₹50              | ₹250                   |
+| 2nd   | 25       | ₹125             | ₹3,125                 |
+| 3rd   | 125      | ₹625             | ₹78,125                |
+| 4th   | 625      | ₹1,875           | ₹1,171,875             |
+| 5th   | 3,125    | ₹9,375           | ₹29,296,875            |
+| 6th   | 15,625   | ₹46,875          | ₹732,421,875           |
+| 7th   | 78,125   | ₹234,375         | ₹18,310,546,875        |
+
+Matrix Income Distribution Logic:
+- When a user activates TPIN, income is distributed to their upline
+- Each level receives income when new members join their downline
+- If an upline user is inactive, income passes to the next active user
+- Income is awarded immediately upon TPIN activation
+
+--------------------------------------------------
+3. GET MATRIX STRUCTURE
+--------------------------------------------------
+Endpoint: GET /api/mlm/matrix/structure
+Description: Get detailed matrix structure and income information for user
+
+Request:
+```
+GET /api/mlm/matrix/structure HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "userInfo": {
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "isActive": true,
+      "rank": "Manager",
+      "teamSize": 25
+    },
+    "incomeWallet": {
+      "balance": 5000,
+      "selfIncome": 10,
+      "directIncome": 400,
+      "matrixIncome": 3750,
+      "rankRewards": 500,
+      "totalEarnings": 4660,
+      "withdrawnAmount": 1000,
+      "lastUpdated": "2023-06-30T12:00:00.000Z"
+    },
+    "matrixStructure": {
+      "1": {
+        "capacity": 5,
+        "currentCount": 3,
+        "incomePerMember": 50,
+        "totalPotentialIncome": 250,
+        "members": [
+          {
+            "userId": "60d5ec9af11ab83456789013",
+            "name": "Jane Smith",
+            "userIdCode": "LIFE10002",
+            "email": "jane@example.com",
+            "isActive": true,
+            "addedAt": "2023-06-25T14:30:00.000Z"
+          }
+          // More level 1 members...
+        ]
+      },
+      "2": {
+        "capacity": 25,
+        "currentCount": 8,
+        "incomePerMember": 125,
+        "totalPotentialIncome": 3125,
+        "members": [
+          // Level 2 members...
+        ]
+      }
+      // More levels...
+    },
+    "matrixSummary": {
+      "totalLevels": 7,
+      "totalMatrixIncome": 3750,
+      "totalDownlineMembers": 15,
+      "activationIncome": 10,
+      "directReferralIncome": 400
+    },
+    "recentTransactions": [
+      {
+        "type": "matrix_income",
+        "amount": 125,
+        "level": 2,
+        "fromUser": {
+          "name": "Robert Johnson",
+          "userId": "LIFE10005"
+        },
+        "date": "2023-06-29T15:30:00.000Z",
+        "description": "Matrix Level 2 income from user activation"
+      }
+      // More recent transactions...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+4. GET INCOME BREAKDOWN
+--------------------------------------------------
+Endpoint: GET /api/mlm/income/breakdown
+Description: Get detailed income breakdown with transaction analysis
+
+Request:
+```
+GET /api/mlm/income/breakdown HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalEarnings": 4660,
+    "currentBalance": 3660,
+    "withdrawnAmount": 1000,
+    "incomeBreakdown": {
+      "selfIncome": 10,
+      "directIncome": 400,
+      "matrixIncome": 3750,
+      "rankRewards": 500,
+      "fxTradingIncome": 0
+    },
+    "incomeByType": {
+      "self_income": {
+        "totalAmount": 10,
+        "count": 1,
+        "transactions": [
+          {
+            "type": "self_income",
+            "amount": 10,
+            "date": "2023-06-25T12:00:00.000Z",
+            "description": "TPIN activation income"
+          }
+        ]
+      },
+      "direct_income": {
+        "totalAmount": 400,
+        "count": 20,
+        "transactions": [
+          // Direct referral transactions...
+        ]
+      },
+      "matrix_income": {
+        "totalAmount": 3750,
+        "count": 15,
+        "transactions": [
+          // Matrix income transactions...
+        ]
+      }
+    },
+    "matrixIncomeByLevel": {
+      "1": {
+        "totalAmount": 150,
+        "count": 3
+      },
+      "2": {
+        "totalAmount": 1000,
+        "count": 8
+      },
+      "3": {
+        "totalAmount": 2500,
+        "count": 4
+      }
+      // More levels...
+    },
+    "lastUpdated": "2023-06-30T12:00:00.000Z"
+  }
+}
+```
+
+--------------------------------------------------
+5. ADMIN: MATRIX MLM STATISTICS
+--------------------------------------------------
+Endpoint: GET /api/admin/dashboard
+Description: Enhanced admin dashboard with comprehensive matrix MLM statistics
+
+Additional MLM Statistics in Response:
+```json
+{
+  "data": {
+    "mlmStats": {
+      "activeReferrers": 150,
+      "totalTeamSize": 2500,
+      "totalDirectIncome": 50000,
+      "totalMatrixIncome": 125000,
+      "totalSelfIncome": 2500,
+      "totalRankRewards": 15000,
+      "totalIncomeDistributed": 192500,
+      "matrixLevelStats": [
+        {
+          "level": 1,
+          "totalMembers": 750,
+          "uniqueUplineUsersCount": 150
+        }
+        // More levels...
+      ],
+      "matrixCompletionRates": [
+        {
+          "level": 1,
+          "totalMembers": 750,
+          "uniqueUplineUsers": 150,
+          "capacity": 5,
+          "completionRate": 100,
+          "potentialIncome": 250
+        }
+        // More levels...
+      ],
+      "tpinActivationStats": [
+        {
+          "_id": {
+            "status": "approved",
+            "isUsed": true
+          },
+          "count": 500
+        },
+        {
+          "_id": {
+            "status": "approved",
+            "isUsed": false
+          },
+          "count": 200
+        }
+        // More stats...
+      ],
+      "topPerformers": [
+        {
+          "name": "John Doe",
+          "userId": "LIFE10001",
+          "incomeWallet": {
+            "totalEarnings": 50000,
+            "directIncome": 10000,
+            "matrixIncome": 35000
+          },
+          "teamSize": 250,
+          "rank": "Executive"
+        }
+        // More top performers...
+      ]
+    }
+  }
+}
+```
+
+##############################################
+#           MLM BUSINESS LOGIC               #
+##############################################
+
+1. **TPIN Activation Process**:
+   - User purchases TPIN through payment
+   - Admin approves TPIN request
+   - User activates account using approved TPIN
+   - Self-income of ₹10 is added to user's wallet
+   - MLM income distribution is triggered
+
+2. **Income Distribution Hierarchy**:
+   - Self Income: ₹10 (immediate)
+   - Direct Referral Income: ₹20 (to immediate referrer)
+   - Matrix Income: Distributed across 7 levels to upline
+
+3. **Matrix Income Rules**:
+   - Income is distributed only to active users
+   - If upline user is inactive, income passes to next active user
+   - Matrix capacity determines maximum earning potential per level
+   - Income is awarded per activation, not per position filling
+
+4. **Rank System Integration**:
+   - User ranks are updated based on team size and performance
+   - Higher ranks unlock additional benefits and rewards
+   - Rank rewards are separate from matrix income
+
+5. **Withdrawal System**:
+   - Minimum withdrawal: ₹150
+   - Users must have sufficient balance
+   - All income types contribute to withdrawable balance
+
+This matrix MLM system ensures fair income distribution while maintaining scalability and preventing abuse through proper validation and active user requirements.

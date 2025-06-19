@@ -1,17 +1,18 @@
 ==============================================
-API DOCUMENTATION - WITHDRAWAL SYSTEM
+API DOCUMENTATION - WITHDRAWAL ENDPOINTS
 ==============================================
 
 BASE URL: http://localhost:3100
 
---------------------------------------------------
-1. USER WITHDRAWAL APIS
---------------------------------------------------
+##############################################
+#           USER WITHDRAWAL APIs             #
+##############################################
 
-1.1 REQUEST WITHDRAWAL
+--------------------------------------------------
+1. REQUEST WITHDRAWAL
 --------------------------------------------------
 Endpoint: POST /api/mlm/withdrawal/request
-Description: Request a withdrawal from income wallet (requires active subscription and TPIN)
+Description: Request a withdrawal from income wallet
 
 Request:
 ```
@@ -20,22 +21,33 @@ Host: localhost:3100
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 Content-Type: application/json
 
-# For UPI payment method:
 {
-  "amount": 150,
+  "amount": 1000,
   "paymentMethod": "upi",
-  "upiId": "user@upi"
+  "paymentDetails": {
+    "upiId": "user@upi"
+  }
 }
+```
 
-# OR for bank transfer payment method:
+OR
+
+```
+POST /api/mlm/withdrawal/request HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
 {
-  "amount": 150,
+  "amount": 1000,
   "paymentMethod": "bank",
-  "bankDetails": {
-    "accountNumber": "1234567890",
-    "ifscCode": "ABCD0001234",
-    "accountHolderName": "John Doe",
-    "bankName": "State Bank of India"
+  "paymentDetails": {
+    "bankDetails": {
+      "accountNumber": "1234567890",
+      "ifscCode": "ABCD0001234",
+      "accountHolderName": "John Doe",
+      "bankName": "Example Bank"
+    }
   }
 }
 ```
@@ -46,45 +58,22 @@ Success Response (200 OK):
   "status": "success",
   "message": "Withdrawal request submitted successfully",
   "data": {
-    "amount": 150,
-    "status": "pending",
-    "requestDate": "2023-06-25T12:00:00.000Z",
-    "paymentMethod": "upi",
-    "paymentDetails": {
-      "upiId": "user@upi"
+    "withdrawal": {
+      "_id": "60d5ec9af11ab83456789012",
+      "amount": 1000,
+      "requestDate": "2023-06-15T08:30:00.000Z",
+      "status": "pending",
+      "paymentMethod": "upi",
+      "paymentDetails": {
+        "upiId": "user@upi"
+      }
     },
-    "remainingBalance": 100
+    "remainingBalance": 4000
   }
 }
 ```
 
-Error Responses:
-
-1. Missing payment details (400 Bad Request):
-```
-{
-  "status": "error",
-  "message": "Please provide a valid payment method (upi or bank)"
-}
-```
-
-2. Missing UPI ID (400 Bad Request):
-```
-{
-  "status": "error",
-  "message": "Please provide UPI ID for UPI payment method"
-}
-```
-
-3. Incomplete bank details (400 Bad Request):
-```
-{
-  "status": "error",
-  "message": "Please provide complete bank details for bank transfer"
-}
-```
-
-4. Minimum withdrawal amount (400 Bad Request):
+Error Response (400 Bad Request):
 ```
 {
   "status": "error",
@@ -92,7 +81,8 @@ Error Responses:
 }
 ```
 
-5. Insufficient balance (400 Bad Request):
+OR
+
 ```
 {
   "status": "error",
@@ -101,7 +91,7 @@ Error Responses:
 ```
 
 --------------------------------------------------
-1.2 GET WITHDRAWAL HISTORY
+2. GET WITHDRAWAL HISTORY
 --------------------------------------------------
 Endpoint: GET /api/mlm/withdrawal/history
 Description: Get user's withdrawal history
@@ -117,35 +107,86 @@ Success Response (200 OK):
 ```
 {
   "status": "success",
-  "results": 2,
   "data": {
+    "summary": {
+      "totalWithdrawn": 5000,
+      "pendingAmount": 1000,
+      "availableBalance": 4000,
+      "withdrawals": {
+        "total": 5,
+        "pending": 1,
+        "approved": 3,
+        "rejected": 1
+      }
+    },
     "withdrawals": [
       {
-        "_id": "60d5ec9af11ab8345678abcd",
-        "amount": 150,
-        "requestDate": "2023-06-25T12:00:00.000Z",
-        "status": "approved",
+        "_id": "60d5ec9af11ab83456789012",
+        "amount": 1000,
+        "requestDate": "2023-06-15T08:30:00.000Z",
+        "status": "pending",
         "paymentMethod": "upi",
         "paymentDetails": {
           "upiId": "user@upi"
-        },
-        "processedDate": "2023-06-26T12:00:00.000Z",
-        "transactionId": "TXN123456"
+        }
       },
       {
-        "_id": "60d5ec9af11ab8345678efgh",
-        "amount": 200,
-        "requestDate": "2023-06-27T12:00:00.000Z",
-        "status": "pending",
+        "_id": "60d5ec9af11ab83456789013",
+        "amount": 2000,
+        "requestDate": "2023-06-10T10:15:00.000Z",
+        "status": "approved",
         "paymentMethod": "bank",
         "paymentDetails": {
           "bankDetails": {
             "accountNumber": "1234567890",
             "ifscCode": "ABCD0001234",
             "accountHolderName": "John Doe",
-            "bankName": "State Bank of India"
+            "bankName": "Example Bank"
           }
-        }
+        },
+        "processedDate": "2023-06-12T14:25:00.000Z",
+        "transactionId": "TXN123456789"
+      },
+      {
+        "_id": "60d5ec9af11ab83456789014",
+        "amount": 1500,
+        "requestDate": "2023-06-05T09:20:00.000Z",
+        "status": "approved",
+        "paymentMethod": "upi",
+        "paymentDetails": {
+          "upiId": "user@upi"
+        },
+        "processedDate": "2023-06-06T11:30:00.000Z",
+        "transactionId": "TXN987654321"
+      },
+      {
+        "_id": "60d5ec9af11ab83456789015",
+        "amount": 1000,
+        "requestDate": "2023-06-01T14:45:00.000Z",
+        "status": "rejected",
+        "paymentMethod": "bank",
+        "paymentDetails": {
+          "bankDetails": {
+            "accountNumber": "1234567890",
+            "ifscCode": "ABCD0001234",
+            "accountHolderName": "John Doe",
+            "bankName": "Example Bank"
+          }
+        },
+        "processedDate": "2023-06-02T10:15:00.000Z",
+        "rejectionReason": "Invalid bank details"
+      },
+      {
+        "_id": "60d5ec9af11ab83456789016",
+        "amount": 500,
+        "requestDate": "2023-05-25T16:20:00.000Z",
+        "status": "approved",
+        "paymentMethod": "upi",
+        "paymentDetails": {
+          "upiId": "user@upi"
+        },
+        "processedDate": "2023-05-26T09:10:00.000Z",
+        "transactionId": "TXN456789123"
       }
     ]
   }
@@ -153,17 +194,14 @@ Success Response (200 OK):
 ```
 
 --------------------------------------------------
-2. ADMIN WITHDRAWAL APIS
+3. GET WITHDRAWALS BY STATUS
 --------------------------------------------------
-
-2.1 GET PENDING WITHDRAWALS
---------------------------------------------------
-Endpoint: GET /api/admin/mlm/withdrawal/pending
-Description: Get all pending withdrawal requests
+Endpoint: GET /api/mlm/withdrawal/:status
+Description: Get user's withdrawals filtered by status
 
 Request:
 ```
-GET /api/admin/mlm/withdrawal/pending HTTP/1.1
+GET /api/mlm/withdrawal/pending HTTP/1.1
 Host: localhost:3100
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
@@ -172,48 +210,75 @@ Success Response (200 OK):
 ```
 {
   "status": "success",
-  "results": 2,
   "data": {
-    "pendingWithdrawals": [
+    "summary": {
+      "status": "pending",
+      "count": 1,
+      "totalAmount": 1000.00,
+      "availableBalance": 4000.00
+    },
+    "withdrawals": [
       {
-        "userId": "60d5ec9af11ab83456789012",
-        "withdrawalId": "60d5ec9af11ab8345678abcd",
-        "userName": "John Doe",
-        "userEmail": "john@example.com",
-        "amount": 150,
-        "requestDate": "2023-06-25T12:00:00.000Z",
+        "_id": "60d5ec9af11ab83456789012",
+        "amount": 1000,
+        "requestDate": "2023-06-15T08:30:00.000Z",
+        "status": "pending",
         "paymentMethod": "upi",
         "paymentDetails": {
           "upiId": "user@upi"
-        },
-        "userPaymentMethods": {
-          "upiId": "user@upi",
-          "bankDetails": null
+        }
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+4. GET PENDING WITHDRAWALS
+--------------------------------------------------
+Endpoint: GET /api/mlm/withdrawal/pending/list
+Description: Get user's pending withdrawals
+
+Request:
+```
+GET /api/mlm/withdrawal/pending/list HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "summary": {
+      "pendingCount": 2,
+      "totalPendingAmount": 2500.00,
+      "availableBalance": 4000.00
+    },
+    "pendingWithdrawals": [
+      {
+        "_id": "60d5ec9af11ab83456789012",
+        "amount": 1000,
+        "requestDate": "2023-06-15T08:30:00.000Z",
+        "status": "pending",
+        "paymentMethod": "upi",
+        "paymentDetails": {
+          "upiId": "user@upi"
         }
       },
       {
-        "userId": "60d5ec9af11ab83456789013",
-        "withdrawalId": "60d5ec9af11ab8345678efgh",
-        "userName": "Jane Smith",
-        "userEmail": "jane@example.com",
-        "amount": 200,
-        "requestDate": "2023-06-27T12:00:00.000Z",
+        "_id": "60d5ec9af11ab83456789017",
+        "amount": 1500,
+        "requestDate": "2023-06-12T14:20:00.000Z",
+        "status": "pending",
         "paymentMethod": "bank",
         "paymentDetails": {
           "bankDetails": {
             "accountNumber": "1234567890",
             "ifscCode": "ABCD0001234",
-            "accountHolderName": "Jane Smith",
-            "bankName": "State Bank of India"
-          }
-        },
-        "userPaymentMethods": {
-          "upiId": null,
-          "bankDetails": {
-            "accountNumber": "1234567890",
-            "ifscCode": "ABCD0001234",
-            "accountHolderName": "Jane Smith",
-            "bankName": "State Bank of India"
+            "accountHolderName": "John Doe",
+            "bankName": "Example Bank"
           }
         }
       }
@@ -223,22 +288,314 @@ Success Response (200 OK):
 ```
 
 --------------------------------------------------
-2.2 APPROVE WITHDRAWAL
+5. GET APPROVED WITHDRAWALS
 --------------------------------------------------
-Endpoint: POST /api/admin/mlm/withdrawal/approve
-Description: Approve a withdrawal request
+Endpoint: GET /api/mlm/withdrawal/approved/list
+Description: Get user's approved withdrawals
 
 Request:
 ```
-POST /api/admin/mlm/withdrawal/approve HTTP/1.1
+GET /api/mlm/withdrawal/approved/list HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "summary": {
+      "approvedCount": 3,
+      "totalApprovedAmount": 4000.00,
+      "totalWithdrawn": 4000.00
+    },
+    "approvedWithdrawals": [
+      {
+        "_id": "60d5ec9af11ab83456789013",
+        "amount": 2000,
+        "requestDate": "2023-06-10T10:15:00.000Z",
+        "status": "approved",
+        "paymentMethod": "bank",
+        "paymentDetails": {
+          "bankDetails": {
+            "accountNumber": "1234567890",
+            "ifscCode": "ABCD0001234",
+            "accountHolderName": "John Doe",
+            "bankName": "Example Bank"
+          }
+        },
+        "processedDate": "2023-06-12T14:25:00.000Z",
+        "transactionId": "TXN123456789"
+      },
+      {
+        "_id": "60d5ec9af11ab83456789014",
+        "amount": 1500,
+        "requestDate": "2023-06-05T09:20:00.000Z",
+        "status": "approved",
+        "paymentMethod": "upi",
+        "paymentDetails": {
+          "upiId": "user@upi"
+        },
+        "processedDate": "2023-06-06T11:30:00.000Z",
+        "transactionId": "TXN987654321"
+      },
+      {
+        "_id": "60d5ec9af11ab83456789016",
+        "amount": 500,
+        "requestDate": "2023-05-25T16:20:00.000Z",
+        "status": "approved",
+        "paymentMethod": "upi",
+        "paymentDetails": {
+          "upiId": "user@upi"
+        },
+        "processedDate": "2023-05-26T09:10:00.000Z",
+        "transactionId": "TXN456789123"
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+6. GET REJECTED WITHDRAWALS
+--------------------------------------------------
+Endpoint: GET /api/mlm/withdrawal/rejected/list
+Description: Get user's rejected withdrawals
+
+Request:
+```
+GET /api/mlm/withdrawal/rejected/list HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "summary": {
+      "rejectedCount": 1,
+      "totalRejectedAmount": 1000.00,
+      "availableBalance": 4000.00
+    },
+    "rejectedWithdrawals": [
+      {
+        "_id": "60d5ec9af11ab83456789015",
+        "amount": 1000,
+        "requestDate": "2023-06-01T14:45:00.000Z",
+        "status": "rejected",
+        "paymentMethod": "bank",
+        "paymentDetails": {
+          "bankDetails": {
+            "accountNumber": "1234567890",
+            "ifscCode": "ABCD0001234",
+            "accountHolderName": "John Doe",
+            "bankName": "Example Bank"
+          }
+        },
+        "processedDate": "2023-06-02T10:15:00.000Z",
+        "rejectionReason": "Invalid bank details"
+      }
+    ]
+  }
+}
+```
+
+##############################################
+#          ADMIN WITHDRAWAL APIs             #
+##############################################
+
+--------------------------------------------------
+1. GET ALL WITHDRAWALS
+--------------------------------------------------
+Endpoint: GET /api/admin/withdrawals
+Description: Get all withdrawals with pagination
+
+Request:
+```
+GET /api/admin/withdrawals?page=1&limit=10 HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 25,
+  "page": 1,
+  "limit": 10,
+  "totalPages": 3,
+  "data": {
+    "withdrawals": [
+      {
+        "_id": "60d5ec9af11ab83456789012",
+        "amount": 1000,
+        "requestDate": "2023-06-15T08:30:00.000Z",
+        "status": "pending",
+        "paymentMethod": "upi",
+        "paymentDetails": {
+          "upiId": "user1@upi"
+        },
+        "userName": "John Doe",
+        "userId": "LIFE10001",
+        "userEmail": "john@example.com"
+      },
+      // More withdrawals...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2. GET WITHDRAWALS BY STATUS
+--------------------------------------------------
+Endpoint: GET /api/admin/withdrawals/:status
+Description: Get withdrawals by status (pending, approved, or rejected)
+
+Request:
+```
+GET /api/admin/withdrawals/pending?page=1&limit=10 HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 8,
+  "page": 1,
+  "limit": 10,
+  "totalPages": 1,
+  "data": {
+    "withdrawals": [
+      {
+        "_id": "60d5ec9af11ab83456789012",
+        "amount": 1000,
+        "requestDate": "2023-06-15T08:30:00.000Z",
+        "status": "pending",
+        "paymentMethod": "upi",
+        "paymentDetails": {
+          "upiId": "user1@upi"
+        },
+        "userName": "John Doe",
+        "userId": "LIFE10001",
+        "userEmail": "john@example.com"
+      },
+      // More pending withdrawals...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+3. GET WITHDRAWAL STATISTICS
+--------------------------------------------------
+Endpoint: GET /api/admin/withdrawals/statistics
+Description: Get withdrawal statistics
+
+Request:
+```
+GET /api/admin/withdrawals/statistics HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "counts": {
+      "total": 25,
+      "pending": 8,
+      "approved": 15,
+      "rejected": 2
+    },
+    "amounts": {
+      "total": 25000,
+      "pending": 8000,
+      "approved": 15000,
+      "rejected": 2000
+    },
+    "currencyConversion": {
+      "INR": {
+        "total": 25000,
+        "pending": 8000,
+        "approved": 15000,
+        "rejected": 2000
+      },
+      "USD": {
+        "total": "299.40",
+        "pending": "95.81",
+        "approved": "179.64",
+        "rejected": "23.95"
+      }
+    }
+  }
+}
+```
+
+--------------------------------------------------
+4. GET USER'S WITHDRAWALS
+--------------------------------------------------
+Endpoint: GET /api/admin/users/:userId/withdrawals
+Description: Get a specific user's withdrawals
+
+Request:
+```
+GET /api/admin/users/LIFE10001/withdrawals HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "email": "john@example.com"
+    },
+    "withdrawals": [
+      {
+        "_id": "60d5ec9af11ab83456789012",
+        "amount": 1000,
+        "requestDate": "2023-06-15T08:30:00.000Z",
+        "status": "pending",
+        "paymentMethod": "upi",
+        "paymentDetails": {
+          "upiId": "user@upi"
+        }
+      },
+      // More withdrawals...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+5. APPROVE WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/admin/withdrawals/approve
+Description: Approve a pending withdrawal
+
+Request:
+```
+POST /api/admin/withdrawals/approve HTTP/1.1
 Host: localhost:3100
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 Content-Type: application/json
 
 {
-  "userId": "60d5ec9af11ab83456789012",
-  "withdrawalId": "60d5ec9af11ab8345678abcd",
-  "transactionId": "TXN123456"
+  "userId": "LIFE10001",
+  "withdrawalId": "60d5ec9af11ab83456789012",
+  "transactionId": "TXN123456789"
 }
 ```
 
@@ -249,37 +606,38 @@ Success Response (200 OK):
   "message": "Withdrawal approved successfully",
   "data": {
     "withdrawal": {
-      "amount": 150,
-      "requestDate": "2023-06-25T12:00:00.000Z",
+      "_id": "60d5ec9af11ab83456789012",
+      "amount": 1000,
+      "requestDate": "2023-06-15T08:30:00.000Z",
       "status": "approved",
       "paymentMethod": "upi",
       "paymentDetails": {
         "upiId": "user@upi"
       },
-      "processedDate": "2023-06-26T12:00:00.000Z",
-      "transactionId": "TXN123456"
+      "processedDate": "2023-06-16T10:20:00.000Z",
+      "transactionId": "TXN123456789"
     }
   }
 }
 ```
 
 --------------------------------------------------
-2.3 REJECT WITHDRAWAL
+6. REJECT WITHDRAWAL
 --------------------------------------------------
-Endpoint: POST /api/admin/mlm/withdrawal/reject
-Description: Reject a withdrawal request
+Endpoint: POST /api/admin/withdrawals/reject
+Description: Reject a pending withdrawal
 
 Request:
 ```
-POST /api/admin/mlm/withdrawal/reject HTTP/1.1
+POST /api/admin/withdrawals/reject HTTP/1.1
 Host: localhost:3100
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 Content-Type: application/json
 
 {
-  "userId": "60d5ec9af11ab83456789012",
-  "withdrawalId": "60d5ec9af11ab8345678abcd",
-  "reason": "Invalid payment details"
+  "userId": "LIFE10001",
+  "withdrawalId": "60d5ec9af11ab83456789012",
+  "rejectionReason": "Invalid payment details"
 }
 ```
 
@@ -287,53 +645,22 @@ Success Response (200 OK):
 ```
 {
   "status": "success",
-  "message": "Withdrawal rejected successfully",
+  "message": "Withdrawal rejected and amount refunded to wallet",
   "data": {
     "withdrawal": {
-      "amount": 150,
-      "requestDate": "2023-06-25T12:00:00.000Z",
+      "_id": "60d5ec9af11ab83456789012",
+      "amount": 1000,
+      "requestDate": "2023-06-15T08:30:00.000Z",
       "status": "rejected",
       "paymentMethod": "upi",
       "paymentDetails": {
         "upiId": "user@upi"
       },
-      "processedDate": "2023-06-26T12:00:00.000Z",
+      "processedDate": "2023-06-16T10:20:00.000Z",
       "rejectionReason": "Invalid payment details"
     },
-    "refundedAmount": 150,
-    "newBalance": 300
+    "refundedAmount": 1000,
+    "newBalance": 5000
   }
 }
 ```
-
---------------------------------------------------
-WITHDRAWAL SYSTEM OVERVIEW
---------------------------------------------------
-
-The withdrawal system allows users to request withdrawals from their income wallet with the following features:
-
-1. Payment Methods:
-   - UPI: Users can provide their UPI ID for quick transfers
-   - Bank Transfer: Users can provide complete bank account details
-
-2. User Requirements:
-   - Active subscription
-   - Active TPIN
-   - Minimum withdrawal amount: ₹150
-   - Sufficient balance in income wallet
-
-3. Withdrawal Process:
-   - User submits withdrawal request with payment details
-   - Amount is deducted from user's available balance
-   - Admin reviews the request
-   - Admin approves with transaction ID or rejects with reason
-   - If rejected, amount is refunded to user's wallet
-
-4. Payment Details Storage:
-   - Payment methods are saved in user profile for future use
-   - Each withdrawal request contains specific payment details used for that transaction
-
-5. Admin Dashboard Features:
-   - View all pending withdrawal requests with user details
-   - See payment method and complete payment details for each request
-   - Process withdrawals by approving or rejecting with appropriate information

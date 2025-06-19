@@ -1,0 +1,1476 @@
+==============================================
+ADMIN API DOCUMENTATION - COMPLETE SYSTEM
+==============================================
+
+BASE URL: http://localhost:3111
+
+TABLE OF CONTENTS:
+1. Admin Authentication APIs
+2. Admin User Management APIs
+3. Admin TPIN Management APIs
+4. Admin Subscription Management APIs
+5. Admin Dashboard & Analytics APIs
+6. Admin Payment Management APIs
+7. Admin MLM Management APIs
+
+##############################################
+#           ADMIN AUTHENTICATION APIs        #
+##############################################
+
+--------------------------------------------------
+1. ADMIN SIGNIN
+--------------------------------------------------
+Endpoint: POST /api/admin/auth/signin
+Description: Authenticate as an admin user
+
+Request:
+```
+POST /api/admin/auth/signin HTTP/1.1
+Host: localhost:3111
+Content-Type: application/json
+
+{
+  "userId": "ADMIN001",
+  "password": "adminpassword123"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789013",
+      "name": "Admin User",
+      "email": "admin@example.com",
+      "userId": "ADMIN001",
+      "role": "admin",
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:00:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Incorrect user ID or password"
+}
+```
+
+--------------------------------------------------
+2. ADMIN PROFILE
+--------------------------------------------------
+Endpoint: GET /api/admin/auth/me
+Description: Get profile information for the logged-in admin
+
+Request:
+```
+GET /api/admin/auth/me HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789013",
+      "name": "Admin User",
+      "email": "admin@example.com",
+      "userId": "ADMIN001",
+      "role": "admin",
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:00:00.000Z"
+    }
+  }
+}
+```
+
+##############################################
+#        ADMIN USER MANAGEMENT APIs          #
+##############################################
+
+--------------------------------------------------
+1. GET ALL USERS
+--------------------------------------------------
+Endpoint: GET /api/admin/users
+Description: Retrieve a list of all registered users
+
+Request:
+```
+GET /api/admin/users HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 50,
+  "data": {
+    "users": [
+      {
+        "_id": "60d5ec9af11ab83456789012",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "userId": "LIFE10001",
+        "role": "user",
+        "isActive": true,
+        "createdAt": "2023-06-25T12:00:00.000Z",
+        "updatedAt": "2023-06-25T12:30:00.000Z"
+      },
+      // More users...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2. GET SPECIFIC USER
+--------------------------------------------------
+Endpoint: GET /api/admin/users/:id
+Description: Get details of a specific user by ID
+
+Request:
+```
+GET /api/admin/users/60d5ec9af11ab83456789012 HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "userId": "LIFE10001",
+      "role": "user",
+      "isActive": true,
+      "tpins": [
+        {
+          "code": "A1B2C3",
+          "isUsed": true,
+          "purchaseDate": "2023-06-25T12:00:00.000Z",
+          "activationDate": "2023-06-25T14:30:00.000Z",
+          "status": "approved"
+        }
+      ],
+      "paymentDetails": [],
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:30:00.000Z"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+3. GET ALL USERS WITH PASSWORDS
+--------------------------------------------------
+Endpoint: GET /api/admin/users-with-passwords
+Description: Retrieve all users with their actual passwords (admin use only)
+
+Request:
+```
+GET /api/admin/users-with-passwords HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 50,
+  "data": {
+    "users": [
+      {
+        "_id": "60d5ec9af11ab83456789012",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "userId": "LIFE10001",
+        "password": "hashed_password_here",
+        "role": "user",
+        "isActive": true,
+        "createdAt": "2023-06-25T12:00:00.000Z",
+        "updatedAt": "2023-06-25T12:30:00.000Z"
+      },
+      // More users...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+4. GET SPECIFIC USER WITH PASSWORD
+--------------------------------------------------
+Endpoint: GET /api/admin/users-with-password/:id
+Description: Get specific user details including password (admin use only)
+
+Request:
+```
+GET /api/admin/users-with-password/60d5ec9af11ab83456789012 HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "userId": "LIFE10001",
+      "password": "hashed_password_here",
+      "role": "user",
+      "isActive": true,
+      "tpins": [
+        {
+          "code": "A1B2C3",
+          "isUsed": true,
+          "purchaseDate": "2023-06-25T12:00:00.000Z",
+          "activationDate": "2023-06-25T14:30:00.000Z",
+          "status": "approved"
+        }
+      ],
+      "paymentDetails": [],
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:30:00.000Z"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+5. CREATE NEW USER
+--------------------------------------------------
+Endpoint: POST /api/admin/users
+Description: Create a new user account
+
+Request:
+```
+POST /api/admin/users HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "name": "New User",
+  "email": "newuser@example.com",
+  "password": "securepassword123",
+  "role": "user"
+}
+```
+
+Success Response (201 Created):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789015",
+      "name": "New User",
+      "email": "newuser@example.com",
+      "userId": "LIFE10005", 
+      "role": "user",
+      "isActive": false,
+      "createdAt": "2023-06-27T14:00:00.000Z",
+      "updatedAt": "2023-06-27T14:00:00.000Z"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+6. UPDATE USER
+--------------------------------------------------
+Endpoint: PATCH /api/admin/users/:id
+Description: Update user information
+
+Request:
+```
+PATCH /api/admin/users/60d5ec9af11ab83456789012 HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "name": "John Updated Doe",
+  "isActive": true
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Updated Doe",
+      "email": "john@example.com",
+      "userId": "LIFE10001",
+      "role": "user",
+      "isActive": true,
+      "updatedAt": "2023-06-27T15:30:00.000Z"
+    }
+  }
+}
+```
+
+##############################################
+#        ADMIN TPIN MANAGEMENT APIs          #
+##############################################
+
+--------------------------------------------------
+1. GET PENDING TPIN REQUESTS
+--------------------------------------------------
+Endpoint: GET /api/admin/tpin/pending
+Description: Get list of all pending TPIN purchase requests
+
+Request:
+```
+GET /api/admin/tpin/pending HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 3,
+  "data": {
+    "pendingRequests": [
+      {
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "tpin": {
+          "code": "A1B2C3",
+          "isUsed": false,
+          "purchaseDate": "2023-06-25T12:00:00.000Z",
+          "status": "pending",
+          "_id": "60d5ec9af11ab87654321000"
+        }
+      },
+      // More pending requests...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2. APPROVE TPIN REQUEST
+--------------------------------------------------
+Endpoint: POST /api/admin/tpin/approve
+Description: Approve a pending TPIN request
+
+Request:
+```
+POST /api/admin/tpin/approve HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "tpinId": "60d5ec9af11ab87654321000"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "TPIN approved successfully",
+  "data": {
+    "tpin": {
+      "code": "A1B2C3",
+      "isUsed": false,
+      "purchaseDate": "2023-06-25T12:00:00.000Z",
+      "activationDate": "2023-06-27T10:15:00.000Z",
+      "status": "approved",
+      "_id": "60d5ec9af11ab87654321000"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+3. REJECT TPIN REQUEST
+--------------------------------------------------
+Endpoint: POST /api/admin/tpin/reject
+Description: Reject a pending TPIN request
+
+Request:
+```
+POST /api/admin/tpin/reject HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "tpinId": "60d5ec9af11ab87654321000",
+  "reason": "Payment verification failed"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "TPIN request rejected successfully"
+}
+```
+
+--------------------------------------------------
+4. GET ALL TPIN TRANSACTIONS
+--------------------------------------------------
+Endpoint: GET /api/admin/tpin/transactions
+Description: Get all TPIN transactions (approved, rejected, used)
+
+Request:
+```
+GET /api/admin/tpin/transactions HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 50,
+  "data": {
+    "transactions": [
+      {
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "tpin": {
+          "code": "A1B2C3",
+          "isUsed": true,
+          "purchaseDate": "2023-06-25T12:00:00.000Z",
+          "activationDate": "2023-06-25T14:30:00.000Z",
+          "usedAt": "2023-06-26T09:15:00.000Z",
+          "status": "approved"
+        }
+      },
+      // More transactions...
+    ]
+  }
+}
+```
+
+##############################################
+#   ADMIN SUBSCRIPTION MANAGEMENT APIs       #
+##############################################
+
+--------------------------------------------------
+1. GET PENDING SUBSCRIPTIONS
+--------------------------------------------------
+Endpoint: GET /api/admin/subscriptions/pending
+Description: Get list of pending subscription payment requests
+
+Request:
+```
+GET /api/admin/subscriptions/pending HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "pendingRequests": [
+      {
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "paymentId": "PAYMENT123456",
+        "paymentDetails": {
+          "paymentId": "PAYMENT123456",
+          "amount": 99.99,
+          "currency": "USD",
+          "status": "pending",
+          "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+          "date": "2023-06-25T12:00:00.000Z"
+        },
+        "screenshotPath": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+        "screenshotUrl": "http://localhost:3111/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+        "subscriptionPlan": "standard"
+      },
+      // More pending requests...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2. APPROVE SUBSCRIPTION
+--------------------------------------------------
+Endpoint: POST /api/admin/subscriptions/approve
+Description: Approve a pending subscription payment
+
+Request:
+```
+POST /api/admin/subscriptions/approve HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "paymentId": "PAYMENT123456"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Subscription approved successfully",
+  "data": {
+    "subscription": {
+      "active": true,
+      "expiryDate": "2024-06-27T10:15:00.000Z"
+    },
+    "payment": {
+      "paymentId": "PAYMENT123456",
+      "status": "verified"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+3. REJECT SUBSCRIPTION
+--------------------------------------------------
+Endpoint: POST /api/admin/subscriptions/reject
+Description: Reject a pending subscription payment
+
+Request:
+```
+POST /api/admin/subscriptions/reject HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "paymentId": "PAYMENT123456",
+  "reason": "Invalid payment details"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Subscription rejected successfully",
+  "data": {
+    "payment": {
+      "paymentId": "PAYMENT123456",
+      "status": "rejected",
+      "rejectionReason": "Invalid payment details"
+    }
+  }
+}
+```
+
+##############################################
+#    ADMIN DASHBOARD & ANALYTICS APIs        #
+##############################################
+
+--------------------------------------------------
+1. GET DASHBOARD SUMMARY
+--------------------------------------------------
+Endpoint: GET /api/admin/dashboard/summary
+Description: Get summary metrics for admin dashboard
+
+Request:
+```
+GET /api/admin/dashboard/summary HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalUsers": 1250,
+    "activeUsers": 985,
+    "newUsersToday": 15,
+    "pendingTPINRequests": 23,
+    "pendingSubscriptions": 18,
+    "totalRevenue": 125000.00,
+    "revenueThisMonth": 12500.00,
+    "tpinsSold": 2150,
+    "tpinsActive": 1850
+  }
+}
+```
+
+--------------------------------------------------
+2. GET REVENUE ANALYTICS
+--------------------------------------------------
+Endpoint: GET /api/admin/dashboard/revenue
+Description: Get detailed revenue analytics
+
+Request:
+```
+GET /api/admin/dashboard/revenue HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalRevenue": 125000.00,
+    "monthlyRevenue": {
+      "Jan": 10500.00,
+      "Feb": 11200.00,
+      "Mar": 9800.00,
+      "Apr": 10100.00,
+      "May": 11500.00,
+      "Jun": 12500.00
+    },
+    "revenueBySource": {
+      "subscriptions": 75000.00,
+      "tpinSales": 50000.00
+    },
+    "topPayingUsers": [
+      {
+        "userId": "LIFE10025",
+        "name": "Michael Johnson",
+        "totalSpent": 1250.00
+      },
+      // More top paying users...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+3. GET USER GROWTH ANALYTICS
+--------------------------------------------------
+Endpoint: GET /api/admin/dashboard/users
+Description: Get user growth and activity analytics
+
+Request:
+```
+GET /api/admin/dashboard/users HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalUsers": 1250,
+    "userGrowth": {
+      "Jan": 150,
+      "Feb": 180,
+      "Mar": 210,
+      "Apr": 190,
+      "May": 230,
+      "Jun": 290
+    },
+    "activeUsers": {
+      "Jan": 120,
+      "Feb": 145,
+      "Mar": 175,
+      "Apr": 160,
+      "May": 200,
+      "Jun": 250
+    },
+    "usersByStatus": {
+      "active": 985,
+      "inactive": 265
+    }
+  }
+}
+```
+
+--------------------------------------------------
+ADMIN DASHBOARD APIS
+--------------------------------------------------
+
+1. GET DASHBOARD STATISTICS
+--------------------------------------------------
+Endpoint: GET /api/admin/dashboard/stats
+Description: Get comprehensive dashboard statistics including user, payment, and MLM metrics
+
+Query Parameters:
+- startDate (optional): Start date for period statistics (default: 30 days ago)
+- endDate (optional): End date for period statistics (default: current date)
+
+Request:
+```
+GET /api/admin/dashboard/stats?startDate=2023-06-01&endDate=2023-06-30 HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "userStats": {
+      "totalUsers": 500,
+      "newUsers": 50,
+      "activeUsers": 350,
+      "activeSubscriptions": 300,
+      "activeTpins": 280,
+      "pendingSubscriptions": 20,
+      "pendingTpins": 15
+    },
+    "financialStats": {
+      "totalRevenue": 25000,
+      "totalRevenueInr": 2087500,
+      "pendingAmount": 5000,
+      "pendingAmountInr": 417500,
+      "rejectedAmount": 1000,
+      "rejectedAmountInr": 83500,
+      "revenueInPeriod": 8000,
+      "revenueInPeriodInr": 668000,
+      "transactionsInPeriod": 80,
+      "totalWithdrawals": {
+        "pending": {
+          "totalAmount": 3500,
+          "count": 35
+        },
+        "approved": {
+          "totalAmount": 12000,
+          "count": 120
+        },
+        "rejected": {
+          "totalAmount": 500,
+          "count": 5
+        }
+      },
+      "conversionRate": {
+        "usdToInr": 83.5
+      }
+    },
+    "paymentStats": {
+      "byPurpose": {
+        "tpin_purchase": {
+          "total": { "count": 300, "amount": 15000 },
+          "pending": { "count": 50, "amount": 2500 },
+          "verified": { "count": 240, "amount": 12000 },
+          "rejected": { "count": 10, "amount": 500 }
+        },
+        "subscription": {
+          "total": { "count": 200, "amount": 10000 },
+          "pending": { "count": 30, "amount": 1500 },
+          "verified": { "count": 160, "amount": 8000 },
+          "rejected": { "count": 10, "amount": 500 }
+        },
+        "trading_package": {
+          "total": { "count": 100, "amount": 6000 },
+          "pending": { "count": 20, "amount": 1000 },
+          "verified": { "count": 75, "amount": 5000 },
+          "rejected": { "count": 5, "amount": 0 }
+        }
+      },
+      "byStatus": {
+        "pending": { "count": 100, "amount": 5000 },
+        "verified": { "count": 475, "amount": 25000 },
+        "rejected": { "count": 25, "amount": 1000 }
+      },
+      "period": {
+        "byPurpose": {
+          "tpin_purchase": {
+            "total": { "count": 60, "amount": 3000 },
+            "pending": { "count": 10, "amount": 500 },
+            "verified": { "count": 48, "amount": 2400 },
+            "rejected": { "count": 2, "amount": 100 }
+          },
+          "subscription": {
+            "total": { "count": 40, "amount": 2000 },
+            "pending": { "count": 6, "amount": 300 },
+            "verified": { "count": 32, "amount": 1600 },
+            "rejected": { "count": 2, "amount": 100 }
+          },
+          "trading_package": {
+            "total": { "count": 20, "amount": 1200 },
+            "pending": { "count": 4, "amount": 200 },
+            "verified": { "count": 15, "amount": 1000 },
+            "rejected": { "count": 1, "amount": 0 }
+          }
+        },
+        "byStatus": {
+          "pending": { "count": 20, "amount": 1000 },
+          "verified": { "count": 95, "amount": 5000 },
+          "rejected": { "count": 5, "amount": 200 }
+        }
+      },
+      "recentPayments": [
+        {
+          "userId": "60d5ec9af11ab83456789012",
+          "userName": "John Doe",
+          "userEmail": "john@example.com",
+          "userIdCode": "LIFE10001",
+          "paymentId": "PAYMENT123456",
+          "amount": 99.99,
+          "currency": "USD",
+          "purpose": "tpin_purchase",
+          "status": "verified",
+          "date": "2023-06-25T12:00:00.000Z"
+        }
+        // More recent payments...
+      ]
+    },
+    "mlmStats": {
+      "activeReferrers": 150,
+      "totalTeamSize": 450,
+      "totalDirectIncome": 3000,
+      "totalMatrixIncome": 5000,
+      "totalSelfIncome": 2500,
+      "totalRankRewards": 8000,
+      "activeTradingPackages": 75,
+      "rankDistribution": [
+        { "_id": "Newcomer", "count": 200 },
+        { "_id": "Associate", "count": 150 },
+        { "_id": "Senior", "count": 100 },
+        { "_id": "Manager", "count": 30 },
+        { "_id": "Director", "count": 15 },
+        { "_id": "Executive", "count": 5 }
+      ]
+    },
+    "chartData": {
+      "labels": ["2023-06-01", "2023-06-02", "2023-06-03", /* ... */],
+      "datasets": {
+        "newUsers": [5, 7, 3, /* ... */],
+        "revenue": [250, 350, 150, /* ... */],
+        "withdrawals": [100, 150, 50, /* ... */]
+      }
+    }
+  }
+}
+```
+
+##############################################
+#    ADMIN PAYMENT MANAGEMENT APIs          #
+##############################################
+
+--------------------------------------------------
+1. GET ALL PAYMENTS
+--------------------------------------------------
+Endpoint: GET /api/admin/payments
+Description: Get all payment records
+
+Request:
+```
+GET /api/admin/payments HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 50,
+  "data": {
+    "payments": [
+      {
+        "_id": "60d5ec9af11ab87654321777",
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "paymentId": "PAYMENT123456",
+        "amount": 99.99,
+        "currency": "USD",
+        "purpose": "tpin_purchase",
+        "status": "verified",
+        "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+        "date": "2023-06-25T12:00:00.000Z"
+      },
+      // More payments...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2. GET PAYMENT BY ID
+--------------------------------------------------
+Endpoint: GET /api/admin/payments/:id
+Description: Get details of a specific payment
+
+Request:
+```
+GET /api/admin/payments/60d5ec9af11ab87654321777 HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "payment": {
+      "_id": "60d5ec9af11ab87654321777",
+      "userId": "60d5ec9af11ab83456789012",
+      "userName": "John Doe",
+      "userEmail": "john@example.com",
+      "userIdCode": "LIFE10001",
+      "paymentId": "PAYMENT123456",
+      "amount": 99.99,
+      "currency": "USD",
+      "purpose": "tpin_purchase",
+      "status": "verified",
+      "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+      "date": "2023-06-25T12:00:00.000Z"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+3. GET USER PAYMENTS
+--------------------------------------------------
+Endpoint: GET /api/admin/users/:userId/payments
+Description: Get all payments for a specific user
+
+Request:
+```
+GET /api/admin/users/60d5ec9af11ab83456789012/payments HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "payments": [
+      {
+        "_id": "60d5ec9af11ab87654321777",
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "userIdCode": "LIFE10001",
+        "paymentId": "PAYMENT123456",
+        "amount": 99.99,
+        "currency": "USD",
+        "purpose": "tpin_purchase",
+        "status": "verified",
+        "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+        "date": "2023-06-25T12:00:00.000Z"
+      },
+      {
+        "_id": "60d5ec9af11ab87654321888",
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "userIdCode": "LIFE10001",
+        "paymentId": "PAYMENT789012",
+        "amount": 49.99,
+        "currency": "USD",
+        "purpose": "subscription",
+        "status": "pending",
+        "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624712400000-payment.jpg",
+        "date": "2023-06-26T12:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+4. APPROVE PAYMENT
+--------------------------------------------------
+Endpoint: POST /api/admin/payments/approve
+Description: Approve a pending payment
+
+Request:
+```
+POST /api/admin/payments/approve HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "paymentId": "60d5ec9af11ab87654321888"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Payment approved successfully",
+  "data": {
+    "payment": {
+      "paymentId": "PAYMENT789012",
+      "amount": 49.99,
+      "currency": "USD",
+      "purpose": "tpin_purchase",
+      "status": "verified",
+      "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624712400000-payment.jpg",
+      "date": "2023-06-26T12:00:00.000Z"
+    },
+    "tpins": [
+      {
+        "code": "A1B2C3D4",
+        "isUsed": false,
+        "purchaseDate": "2023-06-26T14:30:00.000Z",
+        "status": "approved"
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+5. REJECT PAYMENT
+--------------------------------------------------
+Endpoint: POST /api/admin/payments/reject
+Description: Reject a pending payment
+
+Request:
+```
+POST /api/admin/payments/reject HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "paymentId": "60d5ec9af11ab87654321888",
+  "reason": "Invalid payment details"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Payment rejected successfully",
+  "data": {
+    "payment": {
+      "paymentId": "PAYMENT789012",
+      "amount": 49.99,
+      "currency": "USD",
+      "purpose": "tpin_purchase",
+      "status": "rejected",
+      "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624712400000-payment.jpg",
+      "date": "2023-06-26T12:00:00.000Z",
+      "rejectionReason": "Invalid payment details"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+6. GET APPROVED PAYMENTS
+--------------------------------------------------
+Endpoint: GET /api/admin/payments/approved
+Description: Get all approved/verified payments
+
+Request:
+```
+GET /api/admin/payments/approved HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 25,
+  "data": {
+    "approvedPayments": [
+      {
+        "_id": "60d5ec9af11ab87654321777",
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "userIdCode": "LIFE10001",
+        "paymentId": "PAYMENT123456",
+        "amount": 99.99,
+        "currency": "USD",
+        "purpose": "tpin_purchase",
+        "status": "verified",
+        "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+        "date": "2023-06-25T12:00:00.000Z"
+      },
+      // More approved payments...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+7. GET PENDING PAYMENTS
+--------------------------------------------------
+Endpoint: GET /api/admin/payments/pending
+Description: Get all pending payments awaiting approval
+
+Request:
+```
+GET /api/admin/payments/pending HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 10,
+  "data": {
+    "pendingPayments": [
+      {
+        "_id": "60d5ec9af11ab87654321888",
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "userIdCode": "LIFE10001",
+        "paymentId": "PAYMENT789012",
+        "amount": 49.99,
+        "currency": "USD",
+        "purpose": "tpin_purchase",
+        "status": "pending",
+        "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624712400000-payment.jpg",
+        "date": "2023-06-26T12:00:00.000Z",
+        "quantity": 5
+      },
+      // More pending payments...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+8. GET REJECTED PAYMENTS
+--------------------------------------------------
+Endpoint: GET /api/admin/payments/rejected
+Description: Get all rejected payments
+
+Request:
+```
+GET /api/admin/payments/rejected HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 5,
+  "data": {
+    "rejectedPayments": [
+      {
+        "_id": "60d5ec9af11ab87654321999",
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "userIdCode": "LIFE10001",
+        "paymentId": "PAYMENT456789",
+        "amount": 29.99,
+        "currency": "USD",
+        "purpose": "tpin_purchase",
+        "status": "rejected",
+        "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624798800000-payment.jpg",
+        "date": "2023-06-27T12:00:00.000Z",
+        "rejectionReason": "Payment screenshot unclear"
+      },
+      // More rejected payments...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+9. GET PAYMENT STATISTICS
+--------------------------------------------------
+Endpoint: GET /api/admin/payments/statistics
+Description: Get payment statistics summary
+
+Request:
+```
+GET /api/admin/payments/statistics HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalPayments": 40,
+    "pendingPayments": 10,
+    "approvedPayments": 25,
+    "rejectedPayments": 5,
+    "totalAmount": 2499.75,
+    "pendingAmount": 499.90,
+    "approvedAmount": 1749.85,
+    "rejectedAmount": 250.00,
+    "currency": "USD"
+  }
+}
+```
+
+##############################################
+#       ADMIN MLM MANAGEMENT APIs            #
+##############################################
+
+--------------------------------------------------
+1. GET MLM OVERVIEW
+--------------------------------------------------
+Endpoint: GET /api/admin/mlm/overview
+Description: Get overall MLM system metrics
+
+Request:
+```
+GET /api/admin/mlm/overview HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalUsers": 1250,
+    "activeInNetwork": 985,
+    "totalEarningsDistributed": 87500.00,
+    "pendingWithdrawals": 12500.00,
+    "totalWithdrawals": 75000.00,
+    "networkDepth": 7,
+    "directCommissionsPaid": 35000.00,
+    "matrixCommissionsPaid": 45000.00,
+    "rankBonusesPaid": 7500.00
+  }
+}
+```
+
+--------------------------------------------------
+2. GET TOP PERFORMERS
+--------------------------------------------------
+Endpoint: GET /api/admin/mlm/top-performers
+Description: Get list of top performing users in the MLM network
+
+Request:
+```
+GET /api/admin/mlm/top-performers HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 20,
+  "data": {
+    "topPerformers": [
+      {
+        "userId": "LIFE10025",
+        "name": "Michael Johnson",
+        "email": "michael@example.com",
+        "rank": "Executive",
+        "teamSize": 135,
+        "directReferrals": 25,
+        "totalEarnings": 8500.00,
+        "joinDate": "2023-01-15T10:00:00.000Z"
+      },
+      // More top performers...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+3. GET PENDING WITHDRAWALS
+--------------------------------------------------
+Endpoint: GET /api/admin/mlm/withdrawals/pending
+Description: Get list of pending withdrawal requests
+
+Request:
+```
+GET /api/admin/mlm/withdrawals/pending HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 15,
+  "data": {
+    "pendingWithdrawals": [
+      {
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "email": "john@example.com",
+        "withdrawalId": "WITH123456",
+        "amount": 100.00,
+        "requestDate": "2023-06-27T10:15:00.000Z",
+        "paymentMethod": "bank",
+        "bankDetails": {
+          "accountNumber": "1234567890",
+          "ifscCode": "ABCD0001234",
+          "accountHolderName": "John Doe",
+          "bankName": "Example Bank"
+        }
+      },
+      // More pending withdrawals...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+4. APPROVE WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/admin/mlm/withdrawals/approve
+Description: Approve a pending withdrawal request
+
+Request:
+```
+POST /api/admin/mlm/withdrawals/approve HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "withdrawalId": "WITH123456",
+  "transactionId": "TXN987654321"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal approved successfully",
+  "data": {
+    "withdrawal": {
+      "withdrawalId": "WITH123456",
+      "status": "approved",
+      "processedDate": "2023-06-28T14:30:00.000Z",
+      "transactionId": "TXN987654321"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+5. REJECT WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/admin/mlm/withdrawals/reject
+Description: Reject a pending withdrawal request
+
+Request:
+```
+POST /api/admin/mlm/withdrawals/reject HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "withdrawalId": "WITH123456",
+  "reason": "Invalid bank details provided"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal rejected successfully",
+  "data": {
+    "withdrawal": {
+      "withdrawalId": "WITH123456",
+      "status": "rejected",
+      "rejectionReason": "Invalid bank details provided"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+6. VIEW MLM NETWORK STRUCTURE
+--------------------------------------------------
+Endpoint: GET /api/admin/mlm/network/:userId
+Description: View the MLM network structure under a specific user
+
+Request:
+```
+GET /api/admin/mlm/network/60d5ec9af11ab83456789012 HTTP/1.1
+Host: localhost:3111
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "userId": "LIFE10001",
+      "name": "John Doe"
+    },
+    "teamSize": 25,
+    "networkStructure": {
+      "level1": [
+        {
+          "userId": "LIFE10002",
+          "name": "Jane Smith",
+          "isActive": true,
+          "joinDate": "2023-06-20T12:00:00.000Z",
+          "teamSize": 8
+        },
+        // More level 1 users...
+      ],
+      "level2": [
+        // Level 2 users...
+      ],
+      "level3": [
+        // Level 3 users...
+      ]
+    }
+  }
+}
+``` 

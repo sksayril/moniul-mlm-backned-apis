@@ -1,0 +1,263 @@
+##############################################
+#           PAYMENT APIs                     #
+##############################################
+
+--------------------------------------------------
+1. CREATE PAYMENT
+--------------------------------------------------
+Endpoint: POST /api/payments/create
+Description: Create a new payment record
+
+Request:
+```
+POST /api/payments/create HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: multipart/form-data
+
+form-data:
+- paymentId: "PAYMENT123456"
+- amount: 99.99
+- currency: "USD"
+- paymentMethod: "bank_transfer"
+- purpose: "tpin_purchase"
+- screenshot: [file upload]
+```
+
+Success Response (201 Created):
+```
+{
+  "status": "success",
+  "message": "Payment record created successfully",
+  "data": {
+    "payment": {
+      "_id": "60d5ec9af11ab87654321777",
+      "userId": "60d5ec9af11ab83456789012",
+      "paymentId": "PAYMENT123456",
+      "amount": 99.99,
+      "currency": "USD",
+      "paymentMethod": "bank_transfer",
+      "purpose": "tpin_purchase",
+      "status": "pending",
+      "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+      "date": "2023-06-25T12:00:00.000Z"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+2. GET USER PAYMENTS
+--------------------------------------------------
+Endpoint: GET /api/payments/history
+Description: Get payment history for the user
+
+Request:
+```
+GET /api/payments/history HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "payments": [
+      {
+        "_id": "60d5ec9af11ab87654321777",
+        "paymentId": "PAYMENT123456",
+        "amount": 99.99,
+        "currency": "USD",
+        "paymentMethod": "bank_transfer",
+        "purpose": "tpin_purchase",
+        "status": "verified",
+        "date": "2023-06-25T12:00:00.000Z"
+      },
+      {
+        "_id": "60d5ec9af11ab87654321888",
+        "paymentId": "PAYMENT789012",
+        "amount": 49.99,
+        "currency": "USD",
+        "paymentMethod": "bank_transfer",
+        "purpose": "tpin_purchase",
+        "status": "pending",
+        "date": "2023-06-26T12:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+3. GET PAYMENT DETAILS
+--------------------------------------------------
+Endpoint: GET /api/payments/:paymentId
+Description: Get detailed information about a specific payment
+
+Request:
+```
+GET /api/payments/PAYMENT123456 HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "payment": {
+      "_id": "60d5ec9af11ab87654321777",
+      "userId": "60d5ec9af11ab83456789012",
+      "paymentId": "PAYMENT123456",
+      "amount": 99.99,
+      "currency": "USD",
+      "paymentMethod": "bank_transfer",
+      "purpose": "tpin_purchase",
+      "status": "verified",
+      "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+      "date": "2023-06-25T12:00:00.000Z",
+      "verifiedAt": "2023-06-25T15:30:00.000Z",
+      "notes": "Payment verified and TPINs generated"
+    }
+  }
+}
+```
+
+Error Response (404 Not Found):
+```
+{
+  "status": "error",
+  "message": "Payment not found"
+}
+```
+
+##############################################
+#           REFERRAL APIs                    #
+##############################################
+
+--------------------------------------------------
+1. GET REFERRAL LINK
+--------------------------------------------------
+Endpoint: GET /api/referral/link
+Description: Get user's referral link to share
+
+Request:
+```
+GET /api/referral/link HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "userId": "LIFE10001",
+    "referralCode": "LIFE10001",
+    "referralLink": "http://example.com/register?ref=LIFE10001"
+  }
+}
+```
+
+--------------------------------------------------
+2. GET DIRECT REFERRALS
+--------------------------------------------------
+Endpoint: GET /api/referral/direct
+Description: Get list of direct referrals
+
+Request:
+```
+GET /api/referral/direct HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 3,
+  "data": {
+    "directReferrals": [
+      {
+        "name": "Jane Smith",
+        "userId": "LIFE10002",
+        "isActive": true,
+        "joinDate": "2023-06-20T12:00:00.000Z",
+        "teamSize": 2
+      },
+      {
+        "name": "Robert Johnson",
+        "userId": "LIFE10003",
+        "isActive": true,
+        "joinDate": "2023-06-22T14:30:00.000Z",
+        "teamSize": 4
+      },
+      {
+        "name": "Emily Davis",
+        "userId": "LIFE10004",
+        "isActive": true,
+        "joinDate": "2023-06-25T10:15:00.000Z",
+        "teamSize": 1
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+3. GET REFERRAL INCOME
+--------------------------------------------------
+Endpoint: GET /api/referral/income
+Description: Get detailed breakdown of referral income
+
+Request:
+```
+GET /api/referral/income HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalEarnings": 350.00,
+    "availableBalance": 200.00,
+    "withdrawnAmount": 150.00,
+    "incomeBreakdown": {
+      "directIncome": 120.00,
+      "matrixIncome": 130.00,
+      "rankRewards": 100.00,
+      "selfIncome": 50.00
+    },
+    "recentTransactions": [
+      {
+        "type": "matrix_commission",
+        "amount": 10.00,
+        "from": "LIFE10005",
+        "level": 2,
+        "date": "2023-06-28T09:15:00.000Z"
+      },
+      {
+        "type": "direct_commission",
+        "amount": 20.00,
+        "from": "LIFE10006",
+        "date": "2023-06-27T14:30:00.000Z"
+      },
+      {
+        "type": "withdrawal",
+        "amount": -100.00,
+        "status": "completed",
+        "date": "2023-06-26T11:45:00.000Z"
+      }
+    ]
+  }
+}
+```

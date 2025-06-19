@@ -1,0 +1,114 @@
+==============================================
+API DOCUMENTATION - USER PROFILE ENDPOINTS
+==============================================
+
+BASE URL: http://localhost:3100
+
+--------------------------------------------------
+1. GET USER PROFILE BY USER ID
+--------------------------------------------------
+Endpoint: GET /api/auth/users/:userId
+Description: Get a user's profile by their userId
+
+Request:
+```
+GET /api/auth/users/LIFE10001 HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "email": "john@example.com",
+      "mobile": "9876543210",
+      "isActive": true,
+      "rank": "Associate",
+      "teamSize": 15,
+      "referrer": {
+        "_id": "60d5ec9af11ab83456789011",
+        "name": "Super Admin",
+        "userId": "ADMIN001",
+        "email": "admin@example.com"
+      },
+      "createdAt": "2023-06-01T12:00:00.000Z"
+    }
+  }
+}
+```
+
+Note: If the request is made by an admin or by the user themselves, additional sensitive information will be included:
+
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "email": "john@example.com",
+      "mobile": "9876543210",
+      "isActive": true,
+      "rank": "Associate",
+      "teamSize": 15,
+      "referrer": {
+        "_id": "60d5ec9af11ab83456789011",
+        "name": "Super Admin",
+        "userId": "ADMIN001",
+        "email": "admin@example.com"
+      },
+      "createdAt": "2023-06-01T12:00:00.000Z",
+      "aadhaarNumber": "123456789012",
+      "panNumber": "ABCDE1234F",
+      "address": {
+        "street": "123 Main Street",
+        "city": "Mumbai",
+        "state": "Maharashtra",
+        "pincode": "400001",
+        "country": "India"
+      },
+      "incomeWallet": {
+        "balance": 5000,
+        "selfIncome": 10,
+        "directIncome": 200,
+        "matrixIncome": 4790,
+        "totalEarnings": 5000,
+        "withdrawnAmount": 0,
+        "lastUpdated": "2023-06-15T08:30:00.000Z"
+      },
+      "paymentMethods": {
+        "upiId": "johndoe@upi",
+        "bankDetails": {
+          "accountNumber": "1234567890",
+          "ifscCode": "ABCD0001234",
+          "accountHolderName": "John Doe",
+          "bankName": "Example Bank"
+        }
+      }
+    }
+  }
+}
+```
+
+Error Response (404 Not Found):
+```
+{
+  "status": "error",
+  "message": "User not found"
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Not authorized, token failed"
+}
+``` 

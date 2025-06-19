@@ -20,7 +20,7 @@ Content-Type: application/json
   "name": "John Doe",
   "email": "john@example.com",
   "password": "password123",
-  "referralCode": "ABC123XY"  // Optional: Join MLM network during signup
+  "referralCode": "LIFE10001"  // Optional: Join MLM network during signup (Use userId as referral code)
 }
 ```
 
@@ -34,17 +34,10 @@ Success Response (201 Created):
       "_id": "60d5ec9af11ab83456789012",
       "name": "John Doe",
       "email": "john@example.com",
+      "userId": "LIFE10001",  // Automatically generated userId in format LIFE + number
       "role": "user",
-      "subscription": {
-        "active": false,
-        "expiryDate": null,
-        "plan": null
-      },
-      "tpin": {
-        "value": null,
-        "active": false,
-        "requestDate": null
-      },
+      "isActive": false,      // Account needs to be activated with TPIN
+      "tpins": [],           // User needs to purchase TPINs
       "paymentDetails": [],
       "createdAt": "2023-06-25T12:00:00.000Z",
       "updatedAt": "2023-06-25T12:00:00.000Z"
@@ -65,7 +58,7 @@ Error Response (400 Bad Request):
 2. USER SIGNIN
 --------------------------------------------------
 Endpoint: POST /api/auth/signin
-Description: Login an existing user
+Description: Login an existing user using user ID
 
 Request:
 ```
@@ -74,7 +67,7 @@ Host: localhost:3100
 Content-Type: application/json
 
 {
-  "email": "john@example.com",
+  "userId": "LIFE10001",       // User ID is now used for login instead of email
   "password": "securepassword123"
 }
 ```
@@ -89,17 +82,10 @@ Success Response (200 OK):
       "_id": "60d5ec9af11ab83456789012",
       "name": "John Doe",
       "email": "john@example.com",
+      "userId": "LIFE10001",
       "role": "user",
-      "subscription": {
-        "active": false,
-        "expiryDate": null,
-        "plan": null
-      },
-      "tpin": {
-        "value": null,
-        "active": false,
-        "requestDate": null
-      },
+      "isActive": false,
+      "tpins": [],
       "paymentDetails": [],
       "createdAt": "2023-06-25T12:00:00.000Z",
       "updatedAt": "2023-06-25T12:00:00.000Z"
@@ -112,7 +98,7 @@ Error Response (401 Unauthorized):
 ```
 {
   "status": "error",
-  "message": "Incorrect email or password"
+  "message": "Incorrect user ID or password"
 }
 ```
 
@@ -138,20 +124,27 @@ Success Response (200 OK):
       "_id": "60d5ec9af11ab83456789012",
       "name": "John Doe",
       "email": "john@example.com",
+      "userId": "LIFE10001",
       "role": "user",
-      "subscription": {
-        "active": false,
-        "expiryDate": null,
-        "plan": null
-      },
-      "tpin": {
-        "value": null,
-        "active": false,
-        "requestDate": null
-      },
+      "isActive": true,  // Whether account is activated
+      "tpins": [
+        {
+          "code": "A1B2C3",
+          "isUsed": true,
+          "purchaseDate": "2023-06-25T12:00:00.000Z",
+          "activationDate": "2023-06-25T12:30:00.000Z",
+          "status": "approved"
+        },
+        {
+          "code": "D4E5F6",
+          "isUsed": false,
+          "purchaseDate": "2023-06-25T12:00:00.000Z",
+          "status": "approved"
+        }
+      ],
       "paymentDetails": [],
       "createdAt": "2023-06-25T12:00:00.000Z",
-      "updatedAt": "2023-06-25T12:00:00.000Z"
+      "updatedAt": "2023-06-25T12:30:00.000Z"
     }
   }
 }
@@ -168,12 +161,12 @@ Error Response (401 Unauthorized):
 --------------------------------------------------
 4. UPDATE USER PROFILE
 --------------------------------------------------
-Endpoint: PATCH /api/auth/updateMe
+Endpoint: POST /api/auth/updateMe
 Description: Update the currently logged-in user's profile
 
 Request:
 ```
-PATCH /api/auth/updateMe HTTP/1.1
+POST /api/auth/updateMe HTTP/1.1
 Host: localhost:3100
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 Content-Type: application/json
@@ -192,17 +185,10 @@ Success Response (200 OK):
       "_id": "60d5ec9af11ab83456789012",
       "name": "John Updated Doe",
       "email": "john@example.com",
+      "userId": "LIFE10001",
       "role": "user",
-      "subscription": {
-        "active": false,
-        "expiryDate": null,
-        "plan": null
-      },
-      "tpin": {
-        "value": null,
-        "active": false,
-        "requestDate": null
-      },
+      "isActive": true,
+      "tpins": [...],
       "paymentDetails": [],
       "createdAt": "2023-06-25T12:00:00.000Z",
       "updatedAt": "2023-06-25T12:05:00.000Z"
@@ -219,6 +205,423 @@ Error Response (401 Unauthorized):
 }
 ```
 
+--------------------------------------------------
+5. ACTIVATE ACCOUNT WITH TPIN
+--------------------------------------------------
+Endpoint: POST /api/auth/activate
+Description: Activate user account using an approved TPIN
+
+Request:
+```
+POST /api/auth/activate HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "tpinCode": "A1B2C3"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Account activated successfully",
+  "data": {
+    "isActive": true
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Invalid or already used TPIN"
+}
+```
+
 Note: To use these APIs, you'll need to:
 1. First sign up to get a JWT token
 2. Include the JWT token in the Authorization header as "Bearer [token]" for protected routes
+3. Purchase and activate TPINs to use certain functionalities
+
+##############################################
+#           ACCOUNT SETTINGS APIs           #
+##############################################
+
+--------------------------------------------------
+1. GET ACCOUNT PROFILE
+--------------------------------------------------
+Endpoint: GET /api/auth/account
+Description: Get the current user's account profile
+
+Request:
+```
+GET /api/auth/account HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "email": "john@example.com",
+      "mobile": "9876543210",
+      "aadhaarNumber": "123456789012",
+      "panNumber": "ABCDE1234F",
+      "address": {
+        "street": "123 Main Street",
+        "city": "Mumbai",
+        "state": "Maharashtra",
+        "pincode": "400001",
+        "country": "India"
+      },
+      "isActive": true,
+      "role": "user",
+      "referrer": {
+        "_id": "60d5ec9af11ab83456789011",
+        "name": "Super Admin",
+        "userId": "ADMIN001",
+        "email": "admin@example.com"
+      },
+      "rank": "Associate",
+      "teamSize": 15,
+      "incomeWallet": {
+        "balance": 5000,
+        "selfIncome": 10,
+        "directIncome": 200,
+        "matrixIncome": 4790,
+        "dailyTeamIncome": 0,
+        "rankRewards": 0,
+        "fxTradingIncome": 0,
+        "totalEarnings": 5000,
+        "withdrawnAmount": 0,
+        "lastUpdated": "2023-06-15T08:30:00.000Z"
+      },
+      "paymentMethods": {
+        "upiId": "johndoe@upi",
+        "bankDetails": {
+          "accountNumber": "1234567890",
+          "ifscCode": "ABCD0001234",
+          "accountHolderName": "John Doe",
+          "bankName": "Example Bank"
+        }
+      },
+      "createdAt": "2023-06-01T12:00:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Not authorized, token failed"
+}
+```
+
+--------------------------------------------------
+2. UPDATE ACCOUNT PROFILE
+--------------------------------------------------
+Endpoint: PUT /api/auth/account/profile
+Description: Update user's profile information
+
+Request:
+```
+PUT /api/auth/account/profile HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "name": "John Smith",
+  "email": "johnsmith@example.com",
+  "mobile": "9876543210",
+  "aadhaarNumber": "123456789012",
+  "panNumber": "ABCDE1234F",
+  "address": {
+    "street": "456 New Street",
+    "city": "New Delhi",
+    "state": "Delhi",
+    "pincode": "110001",
+    "country": "India"
+  }
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Profile updated successfully",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Smith",
+      "userId": "LIFE10001",
+      "email": "johnsmith@example.com",
+      "mobile": "9876543210",
+      "aadhaarNumber": "123456789012",
+      "panNumber": "ABCDE1234F",
+      "address": {
+        "street": "456 New Street",
+        "city": "New Delhi",
+        "state": "Delhi",
+        "pincode": "110001",
+        "country": "India"
+      },
+      "isActive": true,
+      "role": "user",
+      // other user fields...
+    }
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Email already in use"
+}
+```
+
+OR
+
+```
+{
+  "status": "error",
+  "message": "Mobile number must be 10 digits"
+}
+```
+
+OR
+
+```
+{
+  "status": "error",
+  "message": "Aadhaar number must be 12 digits"
+}
+```
+
+OR
+
+```
+{
+  "status": "error",
+  "message": "Invalid PAN number format"
+}
+```
+
+--------------------------------------------------
+3. UPDATE PAYMENT METHODS
+--------------------------------------------------
+Endpoint: PUT /api/auth/account/payment-methods
+Description: Update user's payment methods for withdrawals
+
+Request:
+```
+PUT /api/auth/account/payment-methods HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "upiId": "johnsmith@upi",
+  "bankDetails": {
+    "accountNumber": "9876543210",
+    "ifscCode": "BANK0001234",
+    "accountHolderName": "John Smith",
+    "bankName": "Example Bank"
+  }
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Payment methods updated successfully",
+  "data": {
+    "paymentMethods": {
+      "upiId": "johnsmith@upi",
+      "bankDetails": {
+        "accountNumber": "9876543210",
+        "ifscCode": "BANK0001234",
+        "accountHolderName": "John Smith",
+        "bankName": "Example Bank"
+      }
+    }
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Please provide all bank details"
+}
+```
+
+--------------------------------------------------
+4. CHANGE PASSWORD
+--------------------------------------------------
+Endpoint: PUT /api/auth/account/change-password
+Description: Change user's password
+
+Request:
+```
+PUT /api/auth/account/change-password HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "currentPassword": "oldpassword123",
+  "newPassword": "newpassword456"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Password changed successfully"
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Current password is incorrect"
+}
+```
+
+OR
+
+```
+{
+  "status": "error",
+  "message": "Password must be at least 6 characters long"
+}
+```
+
+--------------------------------------------------
+5. GET USER PROFILE BY USER ID
+--------------------------------------------------
+Endpoint: GET /api/auth/users/:userId
+Description: Get a user's profile by their userId
+
+Request:
+```
+GET /api/auth/users/LIFE10001 HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "email": "john@example.com",
+      "mobile": "9876543210",
+      "isActive": true,
+      "rank": "Associate",
+      "teamSize": 15,
+      "referrer": {
+        "_id": "60d5ec9af11ab83456789011",
+        "name": "Super Admin",
+        "userId": "ADMIN001",
+        "email": "admin@example.com"
+      },
+      "createdAt": "2023-06-01T12:00:00.000Z"
+    }
+  }
+}
+```
+
+Note: If the request is made by an admin or by the user themselves, additional sensitive information will be included:
+
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "email": "john@example.com",
+      "mobile": "9876543210",
+      "isActive": true,
+      "rank": "Associate",
+      "teamSize": 15,
+      "referrer": {
+        "_id": "60d5ec9af11ab83456789011",
+        "name": "Super Admin",
+        "userId": "ADMIN001",
+        "email": "admin@example.com"
+      },
+      "createdAt": "2023-06-01T12:00:00.000Z",
+      "aadhaarNumber": "123456789012",
+      "panNumber": "ABCDE1234F",
+      "address": {
+        "street": "123 Main Street",
+        "city": "Mumbai",
+        "state": "Maharashtra",
+        "pincode": "400001",
+        "country": "India"
+      },
+      "incomeWallet": {
+        "balance": 5000,
+        "selfIncome": 10,
+        "directIncome": 200,
+        "matrixIncome": 4790,
+        "totalEarnings": 5000,
+        "withdrawnAmount": 0,
+        "lastUpdated": "2023-06-15T08:30:00.000Z"
+      },
+      "paymentMethods": {
+        "upiId": "johndoe@upi",
+        "bankDetails": {
+          "accountNumber": "1234567890",
+          "ifscCode": "ABCD0001234",
+          "accountHolderName": "John Doe",
+          "bankName": "Example Bank"
+        }
+      }
+    }
+  }
+}
+```
+
+Error Response (404 Not Found):
+```
+{
+  "status": "error",
+  "message": "User not found"
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Not authorized, token failed"
+}
+```

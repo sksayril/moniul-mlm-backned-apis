@@ -1,0 +1,513 @@
+##############################################
+#              ADMIN APIs                    #
+##############################################
+
+--------------------------------------------------
+1. GET ALL USERS
+--------------------------------------------------
+Endpoint: GET /api/admin/users
+Description: Get a list of all users (admin only)
+
+Request:
+```
+GET /api/admin/users HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 50,
+  "data": {
+    "users": [
+      {
+        "_id": "60d5ec9af11ab83456789012",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "userId": "LIFE10001",
+        "role": "user",
+        "isActive": true,
+        "createdAt": "2023-06-25T12:00:00.000Z",
+        "updatedAt": "2023-06-25T12:30:00.000Z"
+      },
+      // More users...
+    ]
+  }
+}
+```
+
+Error Response (401 Unauthorized):
+```
+{
+  "status": "error",
+  "message": "Not authorized to access this route"
+}
+```
+
+--------------------------------------------------
+2. GET SPECIFIC USER
+--------------------------------------------------
+Endpoint: GET /api/admin/users/:id
+Description: Get details of a specific user by ID (admin only)
+
+Request:
+```
+GET /api/admin/users/60d5ec9af11ab83456789012 HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "userId": "LIFE10001",
+      "role": "user",
+      "isActive": true,
+      "tpins": [
+        {
+          "code": "A1B2C3",
+          "isUsed": true,
+          "purchaseDate": "2023-06-25T12:00:00.000Z",
+          "activationDate": "2023-06-25T14:30:00.000Z",
+          "status": "approved"
+        }
+      ],
+      "paymentDetails": [],
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T12:30:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (404 Not Found):
+```
+{
+  "status": "error",
+  "message": "No user found with that ID"
+}
+```
+
+--------------------------------------------------
+3. GET PENDING TPIN PAYMENT REQUESTS
+--------------------------------------------------
+Endpoint: GET /api/admin/tpin/pending
+Description: Get a list of pending TPIN payment requests (admin only)
+
+Request:
+```
+GET /api/admin/tpin/pending HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "pendingRequests": [
+      {
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "userIdCode": "LIFE10001",
+        "paymentId": "PAYMENT123456",
+        "paymentDetails": {
+          "paymentId": "PAYMENT123456",
+          "amount": 99.99,
+          "currency": "USD",
+          "status": "pending",
+          "screenshot": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+          "date": "2023-06-25T12:00:00.000Z"
+        },
+        "screenshotPath": "/uploads/payments/60d5ec9af11ab83456789012-1624626000000-payment.jpg",
+        "requestedQuantity": 5
+      },
+      // More pending requests...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+4. APPROVE TPIN REQUEST
+--------------------------------------------------
+Endpoint: POST /api/admin/tpin/approve
+Description: Approve a pending TPIN request and generate TPINs (admin only)
+
+Request:
+```
+POST /api/admin/tpin/approve HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "paymentId": "PAYMENT123456"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "TPIN purchase approved successfully",
+  "data": {
+    "tpins": [
+      {
+        "code": "A1B2C3",
+        "isUsed": false,
+        "purchaseDate": "2023-06-25T12:00:00.000Z",
+        "status": "approved"
+      },
+      // More approved TPINs...
+    ],
+    "payment": {
+      "paymentId": "PAYMENT123456",
+      "status": "verified",
+      "_id": "60d5ec9af11ab87654321098"
+    }
+  }
+}
+```
+
+--------------------------------------------------
+5. REJECT TPIN REQUEST
+--------------------------------------------------
+Endpoint: POST /api/admin/tpin/reject
+Description: Reject a pending TPIN request (admin only)
+
+Request:
+```
+POST /api/admin/tpin/reject HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "paymentId": "PAYMENT123456",
+  "reason": "Invalid payment details provided"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "TPIN request rejected successfully",
+  "data": {
+    "payment": {
+      "paymentId": "PAYMENT123456",
+      "status": "rejected",
+      "rejectionReason": "Invalid payment details provided"
+    }
+  }
+}
+```
+
+##############################################
+#              MLM APIs                      #
+##############################################
+
+--------------------------------------------------
+1. GET REFERRAL DASHBOARD
+--------------------------------------------------
+Endpoint: GET /api/mlm/dashboard
+Description: Get user's MLM referral dashboard information
+
+Request:
+```
+GET /api/mlm/dashboard HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "referralCode": "LIFE10001",
+    "totalReferrals": 5,
+    "directReferrals": 2,
+    "indirectReferrals": 3,
+    "totalEarnings": 350.00,
+    "availableBalance": 200.00,
+    "withdrawnAmount": 150.00,
+    "matrix": {
+      "level1": 2,
+      "level2": 3,
+      "level3": 0
+    },
+    "recentReferrals": [
+      {
+        "name": "Jane Smith",
+        "userId": "LIFE10002",
+        "date": "2023-06-26T14:30:00.000Z",
+        "level": 1
+      },
+      // More referrals...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+2. JOIN WITH REFERRAL CODE
+--------------------------------------------------
+Endpoint: POST /api/mlm/referral/join
+Description: Join an MLM network using someone's referral code (requires active account)
+
+Request:
+```
+POST /api/mlm/referral/join HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "referralCode": "LIFE10001"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Successfully joined referral network",
+  "data": {
+    "referrer": "John Doe",
+    "referrerId": "LIFE10001"
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Invalid referral code"
+}
+```
+
+--------------------------------------------------
+3. REQUEST WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/mlm/withdrawal/request
+Description: Request a withdrawal from MLM earnings (requires active account)
+
+Request:
+```
+POST /api/mlm/withdrawal/request HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "amount": 100.00,
+  "bankDetails": {
+    "bankName": "Example Bank",
+    "accountNumber": "1234567890",
+    "accountName": "John Doe"
+  }
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal request submitted successfully",
+  "data": {
+    "withdrawalId": "WITH123456",
+    "amount": 100.00,
+    "status": "pending",
+    "requestDate": "2023-06-27T10:15:00.000Z"
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "Insufficient balance for withdrawal"
+}
+```
+
+--------------------------------------------------
+4. GET WITHDRAWAL HISTORY
+--------------------------------------------------
+Endpoint: GET /api/mlm/withdrawal/history
+Description: Get history of withdrawal requests
+
+Request:
+```
+GET /api/mlm/withdrawal/history HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "withdrawals": [
+      {
+        "withdrawalId": "WITH123456",
+        "amount": 100.00,
+        "status": "approved",
+        "requestDate": "2023-06-27T10:15:00.000Z",
+        "processDate": "2023-06-28T14:30:00.000Z",
+        "bankDetails": {
+          "bankName": "Example Bank",
+          "accountNumber": "1234567890",
+          "accountName": "John Doe"
+        }
+      },
+      {
+        "withdrawalId": "WITH654321",
+        "amount": 50.00,
+        "status": "pending",
+        "requestDate": "2023-06-29T15:45:00.000Z",
+        "bankDetails": {
+          "bankName": "Example Bank",
+          "accountNumber": "1234567890",
+          "accountName": "John Doe"
+        }
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+5. ADMIN: PENDING WITHDRAWALS
+--------------------------------------------------
+Endpoint: GET /api/mlm-admin/withdrawal/pending
+Description: Get list of pending withdrawal requests (admin only)
+
+Request:
+```
+GET /api/mlm-admin/withdrawal/pending HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "pendingWithdrawals": [
+      {
+        "userId": "60d5ec9af11ab83456789012",
+        "userIdCode": "LIFE10001",
+        "userName": "John Doe",
+        "withdrawalId": "WITH654321",
+        "amount": 50.00,
+        "requestDate": "2023-06-29T15:45:00.000Z",
+        "bankDetails": {
+          "bankName": "Example Bank",
+          "accountNumber": "1234567890",
+          "accountName": "John Doe"
+        }
+      },
+      // More pending withdrawals...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+6. ADMIN: APPROVE WITHDRAWAL
+--------------------------------------------------
+Endpoint: POST /api/mlm-admin/withdrawal/approve
+Description: Approve a withdrawal request (admin only)
+
+Request:
+```
+POST /api/mlm-admin/withdrawal/approve HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "userId": "60d5ec9af11ab83456789012",
+  "withdrawalId": "WITH654321",
+  "transactionDetails": "Payment sent via bank transfer. Reference: REF123456"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "Withdrawal request approved successfully",
+  "data": {
+    "withdrawalId": "WITH654321",
+    "status": "approved",
+    "processDate": "2023-06-30T12:00:00.000Z",
+    "transactionDetails": "Payment sent via bank transfer. Reference: REF123456"
+  }
+}
+```
+
+--------------------------------------------------
+7. ADMIN: MLM METRICS
+--------------------------------------------------
+Endpoint: GET /api/mlm-admin/metrics
+Description: Get overall MLM metrics for admin dashboard (admin only)
+
+Request:
+```
+GET /api/mlm-admin/metrics HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalUsers": 500,
+    "activeUsers": 350,
+    "totalWithdrawals": 45000.00,
+    "pendingWithdrawals": 12500.00,
+    "topReferrers": [
+      {
+        "name": "John Doe",
+        "userId": "LIFE10001",
+        "referrals": 25,
+        "earnings": 3500.00
+      },
+      // More top referrers...
+    ],
+    "recentActivities": [
+      {
+        "type": "withdrawal",
+        "amount": 100.00,
+        "userId": "LIFE10001",
+        "status": "approved",
+        "date": "2023-06-30T12:00:00.000Z"
+      },
+      // More recent activities...
+    ]
+  }
+}
+```

@@ -10,7 +10,7 @@ const cors = require('cors');
 // Import routes
 const indexRouter = require('./routes/index');
 const authRouter = require('./routes/auth.routes');
-const subscriptionRouter = require('./routes/subscription.routes');
+const tpinRouter = require('./routes/tpin.routes');
 const adminRouter = require('./routes/admin.routes');
 const adminAuthRouter = require('./routes/admin.auth.routes');
 const mlmRouter = require('./routes/mlm.routes');
@@ -48,7 +48,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/admin/auth', adminAuthRouter);
 
 // Other protected routes
-app.use('/api/subscription', subscriptionRouter);
+app.use('/api/tpin', tpinRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/mlm', mlmRouter);
 app.use('/api/admin/mlm', mlmAdminRouter);

@@ -348,11 +348,11 @@ exports.requestWithdrawal = async (req, res) => {
       });
     }
     
-    // Check requirements: active subscription and TPIN
-    if (!user.subscription.active || !user.tpin.active) {
+    // Check if user account is active
+    if (!user.isActive) {
       return res.status(400).json({
         status: 'error',
-        message: 'You need an active subscription and TPIN to request withdrawal'
+        message: 'You need an active account to request withdrawal'
       });
     }
     
@@ -410,7 +410,11 @@ exports.requestWithdrawal = async (req, res) => {
 // Get withdrawal history
 exports.getWithdrawalHistory = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const userId = req.user._id;
+    
+    // Get user with withdrawals
+    const user = await User.findById(userId)
+      .select('withdrawals incomeWallet.balance incomeWallet.withdrawnAmount');
     
     if (!user) {
       return res.status(404).json({
@@ -419,17 +423,230 @@ exports.getWithdrawalHistory = async (req, res) => {
       });
     }
     
+    // Sort withdrawals by request date (newest first)
+    const sortedWithdrawals = user.withdrawals.sort(
+      (a, b) => new Date(b.requestDate) - new Date(a.requestDate)
+    );
+    
+    // Calculate statistics
+    const totalWithdrawn = user.incomeWallet.withdrawnAmount || 0;
+    const pendingAmount = sortedWithdrawals
+      .filter(w => w.status === 'pending')
+      .reduce((sum, w) => sum + w.amount, 0);
+    
+    const pendingCount = sortedWithdrawals.filter(w => w.status === 'pending').length;
+    const approvedCount = sortedWithdrawals.filter(w => w.status === 'approved').length;
+    const rejectedCount = sortedWithdrawals.filter(w => w.status === 'rejected').length;
+    
     res.status(200).json({
       status: 'success',
       data: {
-        withdrawals: user.withdrawals
+        summary: {
+          totalWithdrawn,
+          pendingAmount,
+          availableBalance: user.incomeWallet.balance,
+          withdrawals: {
+            total: sortedWithdrawals.length,
+            pending: pendingCount,
+            approved: approvedCount,
+            rejected: rejectedCount
+          }
+        },
+        withdrawals: sortedWithdrawals
       }
     });
-    
   } catch (err) {
+    console.error('Get Withdrawal History Error:', err);
     res.status(500).json({
       status: 'error',
       message: 'Error fetching withdrawal history',
+      error: err.message
+    });
+  }
+};
+
+// Get user's withdrawal history by status
+exports.getWithdrawalsByStatus = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { status } = req.params;
+    
+    // Validate status
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid status. Must be pending, approved, or rejected'
+      });
+    }
+    
+    // Get user with withdrawals
+    const user = await User.findById(userId)
+      .select('withdrawals incomeWallet.balance incomeWallet.withdrawnAmount');
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Filter withdrawals by status
+    const filteredWithdrawals = user.withdrawals
+      .filter(w => w.status === status)
+      .sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate));
+    
+    // Calculate status-specific statistics
+    const totalAmount = filteredWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        summary: {
+          status: status,
+          count: filteredWithdrawals.length,
+          totalAmount: parseFloat(totalAmount.toFixed(2)),
+          availableBalance: user.incomeWallet.balance || 0
+        },
+        withdrawals: filteredWithdrawals
+      }
+    });
+  } catch (err) {
+    console.error(`Get ${req.params.status} Withdrawals Error:`, err);
+    res.status(500).json({
+      status: 'error',
+      message: `Error fetching ${req.params.status} withdrawals`,
+      error: err.message
+    });
+  }
+};
+
+// Get user's pending withdrawals
+exports.getPendingWithdrawals = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Get user with withdrawals
+    const user = await User.findById(userId)
+      .select('withdrawals incomeWallet.balance');
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Filter pending withdrawals
+    const pendingWithdrawals = user.withdrawals
+      .filter(w => w.status === 'pending')
+      .sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate));
+    
+    const totalPendingAmount = pendingWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        summary: {
+          pendingCount: pendingWithdrawals.length,
+          totalPendingAmount: parseFloat(totalPendingAmount.toFixed(2)),
+          availableBalance: user.incomeWallet.balance || 0
+        },
+        pendingWithdrawals
+      }
+    });
+  } catch (err) {
+    console.error('Get Pending Withdrawals Error:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching pending withdrawals',
+      error: err.message
+    });
+  }
+};
+
+// Get user's approved withdrawals
+exports.getApprovedWithdrawals = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Get user with withdrawals
+    const user = await User.findById(userId)
+      .select('withdrawals incomeWallet.withdrawnAmount');
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Filter approved withdrawals
+    const approvedWithdrawals = user.withdrawals
+      .filter(w => w.status === 'approved')
+      .sort((a, b) => new Date(b.processedDate || b.requestDate) - new Date(a.processedDate || a.requestDate));
+    
+    const totalApprovedAmount = approvedWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        summary: {
+          approvedCount: approvedWithdrawals.length,
+          totalApprovedAmount: parseFloat(totalApprovedAmount.toFixed(2)),
+          totalWithdrawn: user.incomeWallet.withdrawnAmount || 0
+        },
+        approvedWithdrawals
+      }
+    });
+  } catch (err) {
+    console.error('Get Approved Withdrawals Error:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching approved withdrawals',
+      error: err.message
+    });
+  }
+};
+
+// Get user's rejected withdrawals
+exports.getRejectedWithdrawals = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Get user with withdrawals
+    const user = await User.findById(userId)
+      .select('withdrawals incomeWallet.balance');
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Filter rejected withdrawals
+    const rejectedWithdrawals = user.withdrawals
+      .filter(w => w.status === 'rejected')
+      .sort((a, b) => new Date(b.processedDate || b.requestDate) - new Date(a.processedDate || a.requestDate));
+    
+    const totalRejectedAmount = rejectedWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        summary: {
+          rejectedCount: rejectedWithdrawals.length,
+          totalRejectedAmount: parseFloat(totalRejectedAmount.toFixed(2)),
+          availableBalance: user.incomeWallet.balance || 0
+        },
+        rejectedWithdrawals
+      }
+    });
+  } catch (err) {
+    console.error('Get Rejected Withdrawals Error:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching rejected withdrawals',
       error: err.message
     });
   }
@@ -577,4 +794,306 @@ const getMatrixIncomeForLevel = (level) => {
   };
   
   return incomeByLevel[level] || 0;
+};
+
+// Get user's referral link
+exports.getReferralLink = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Use userId as referral code if no specific referral code exists
+    const referralCode = user.referralCode || user.userId;
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        userId: user.userId,
+        referralCode: referralCode,
+        referralLink: `http://localhost:5173/register?ref=${referralCode}`
+      }
+    });
+    
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching referral link',
+      error: err.message
+    });
+  }
+};
+
+// Get direct referrals
+exports.getDirectReferrals = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Populate direct referrals with necessary information
+    await User.populate(user, {
+      path: 'referrals',
+      select: 'name userId isActive createdAt teamSize'
+    });
+    
+    // Format the response
+    const directReferrals = user.referrals.map(referral => ({
+      name: referral.name,
+      userId: referral.userId,
+      isActive: referral.isActive,
+      joinDate: referral.createdAt,
+      teamSize: referral.teamSize || 0
+    }));
+    
+    res.status(200).json({
+      status: 'success',
+      results: directReferrals.length,
+      data: {
+        directReferrals
+      }
+    });
+    
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching direct referrals',
+      error: err.message
+    });
+  }
+};
+
+// Get detailed referral income
+exports.getReferralIncome = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Calculate withdrawn amount from completed withdrawals
+    const withdrawnAmount = user.withdrawals
+      .filter(w => w.status === 'approved')
+      .reduce((sum, w) => sum + w.amount, 0);
+    
+    // Create recent transactions array
+    const recentTransactions = [];
+    
+    // Add recent withdrawals to transactions
+    user.withdrawals.slice(0, 5).forEach(withdrawal => {
+      recentTransactions.push({
+        type: 'withdrawal',
+        amount: -withdrawal.amount,
+        status: withdrawal.status,
+        date: withdrawal.requestDate
+      });
+    });
+    
+    // Add more transaction types here if you track them in your system
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        totalEarnings: user.incomeWallet.selfIncome + 
+                      user.incomeWallet.directIncome + 
+                      user.incomeWallet.matrixIncome + 
+                      user.incomeWallet.rankRewards,
+        availableBalance: user.incomeWallet.balance,
+        withdrawnAmount: withdrawnAmount,
+        incomeBreakdown: {
+          directIncome: user.incomeWallet.directIncome,
+          matrixIncome: user.incomeWallet.matrixIncome,
+          rankRewards: user.incomeWallet.rankRewards,
+          selfIncome: user.incomeWallet.selfIncome
+        },
+        recentTransactions: recentTransactions
+      }
+    });
+    
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching referral income details',
+      error: err.message
+    });
+  }
+};
+
+// Get matrix structure and income details
+exports.getMatrixStructure = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .populate('downline.userId', 'name userId email isActive')
+      .populate('incomeTransactions.fromUser', 'name userId');
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Matrix capacity and income for each level
+    const matrixInfo = {
+      1: { capacity: 5, income: 50 },
+      2: { capacity: 25, income: 125 },
+      3: { capacity: 125, income: 625 },
+      4: { capacity: 625, income: 1875 },
+      5: { capacity: 3125, income: 9375 },
+      6: { capacity: 15625, income: 46875 },
+      7: { capacity: 78125, income: 234375 }
+    };
+    
+    // Organize downline by levels
+    const matrixStructure = {};
+    for (let level = 1; level <= 7; level++) {
+      const levelMembers = user.downline.filter(member => member.level === level);
+      matrixStructure[level] = {
+        capacity: matrixInfo[level].capacity,
+        currentCount: levelMembers.length,
+        incomePerMember: matrixInfo[level].income,
+        totalPotentialIncome: matrixInfo[level].income * matrixInfo[level].capacity,
+        members: levelMembers.map(member => ({
+          userId: member.userId._id,
+          name: member.userId.name,
+          userIdCode: member.userId.userId,
+          email: member.userId.email,
+          isActive: member.userId.isActive,
+          addedAt: member.addedAt
+        }))
+      };
+    }
+    
+    // Calculate total matrix income earned
+    const matrixIncomeTransactions = user.incomeTransactions.filter(tx => tx.type === 'matrix_income');
+    const totalMatrixIncome = matrixIncomeTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+    
+    // Recent income transactions
+    const recentTransactions = user.incomeTransactions
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 10)
+      .map(tx => ({
+        type: tx.type,
+        amount: tx.amount,
+        level: tx.level,
+        fromUser: tx.fromUser ? {
+          name: tx.fromUser.name,
+          userId: tx.fromUser.userId
+        } : null,
+        date: tx.date,
+        description: tx.description
+      }));
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        userInfo: {
+          name: user.name,
+          userId: user.userId,
+          isActive: user.isActive,
+          rank: user.rank,
+          teamSize: user.teamSize
+        },
+        incomeWallet: user.incomeWallet,
+        matrixStructure,
+        matrixSummary: {
+          totalLevels: 7,
+          totalMatrixIncome,
+          totalDownlineMembers: user.downline.length,
+          activationIncome: user.incomeWallet.selfIncome,
+          directReferralIncome: user.incomeWallet.directIncome
+        },
+        recentTransactions
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching matrix structure',
+      error: err.message
+    });
+  }
+};
+
+// Get income summary with breakdown
+exports.getIncomeBreakdown = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Group income transactions by type
+    const incomeByType = {};
+    const incomeByLevel = {};
+    
+    user.incomeTransactions.forEach(tx => {
+      // Group by transaction type
+      if (!incomeByType[tx.type]) {
+        incomeByType[tx.type] = {
+          totalAmount: 0,
+          count: 0,
+          transactions: []
+        };
+      }
+      incomeByType[tx.type].totalAmount += tx.amount;
+      incomeByType[tx.type].count += 1;
+      incomeByType[tx.type].transactions.push(tx);
+      
+      // Group matrix income by level
+      if (tx.type === 'matrix_income' && tx.level) {
+        if (!incomeByLevel[tx.level]) {
+          incomeByLevel[tx.level] = {
+            totalAmount: 0,
+            count: 0
+          };
+        }
+        incomeByLevel[tx.level].totalAmount += tx.amount;
+        incomeByLevel[tx.level].count += 1;
+      }
+    });
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        totalEarnings: user.incomeWallet.totalEarnings,
+        currentBalance: user.incomeWallet.balance,
+        withdrawnAmount: user.incomeWallet.withdrawnAmount,
+        incomeBreakdown: {
+          selfIncome: user.incomeWallet.selfIncome,
+          directIncome: user.incomeWallet.directIncome,
+          matrixIncome: user.incomeWallet.matrixIncome,
+          rankRewards: user.incomeWallet.rankRewards,
+          fxTradingIncome: user.incomeWallet.fxTradingIncome
+        },
+        incomeByType,
+        matrixIncomeByLevel: incomeByLevel,
+        lastUpdated: user.incomeWallet.lastUpdated
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching income breakdown',
+      error: err.message
+    });
+  }
 };

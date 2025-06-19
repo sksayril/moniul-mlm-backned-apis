@@ -6,12 +6,40 @@ const userSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    userId: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
+    },
     email: {
         type: String,
         required: true,
         unique: true,
         trim: true,
         lowercase: true
+    },
+    mobile: {
+        type: String,
+        trim: true
+    },
+    aadhaarNumber: {
+        type: String,
+        trim: true
+    },
+    panNumber: {
+        type: String,
+        trim: true
+    },
+    address: {
+        street: String,
+        city: String,
+        state: String,
+        pincode: String,
+        country: {
+            type: String,
+            default: 'India'
+        }
     },
     password: {
         type: String,
@@ -23,26 +51,45 @@ const userSchema = new mongoose.Schema({
         enum: ['user', 'admin'],
         default: 'user'
     },
-    subscription: {
-        active: {
+    isActive: {
+        type: Boolean,
+        default: false
+    },
+    tpins: [{
+        code: {
+            type: String,
+            required: true
+        },
+        isUsed: {
             type: Boolean,
             default: false
         },
-        expiryDate: Date,
-        plan: String
-    },
-    tpin: {
-        value: String,
-        active: {
-            type: Boolean,
-            default: false
+        purchaseDate: {
+            type: Date,
+            default: Date.now
         },
-        requestDate: Date
-    },
+        activationDate: Date,
+        usedAt: Date,
+        status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'pending'
+        },
+        rejectionReason: String
+    }],
     paymentDetails: [{
         paymentId: String,
         amount: Number,
         currency: String,
+        purpose: {
+            type: String,
+            enum: ['tpin_purchase', 'subscription', 'trading_package'],
+            default: 'tpin_purchase'
+        },
+        quantity: {
+            type: Number,
+            default: 1
+        },
         status: {
             type: String,
             enum: ['pending', 'verified', 'rejected'],
@@ -62,11 +109,7 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     },
-    referralCode: {
-        type: String,
-        unique: true,
-        sparse: true
-    },
+    // User ID is also used as referral code
     referrals: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -100,11 +143,42 @@ const userSchema = new mongoose.Schema({
             type: Number,
             default: 0
         },
+        totalEarnings: {
+            type: Number,
+            default: 0
+        },
+        withdrawnAmount: {
+            type: Number,
+            default: 0
+        },
         lastUpdated: {
             type: Date,
             default: Date.now
         }
     },
+    
+    // Income transaction history
+    incomeTransactions: [{
+        type: {
+            type: String,
+            enum: ['self_income', 'direct_income', 'matrix_income', 'rank_reward', 'fx_trading', 'withdrawal'],
+            required: true
+        },
+        amount: {
+            type: Number,
+            required: true
+        },
+        level: Number, // For matrix income
+        fromUser: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        date: {
+            type: Date,
+            default: Date.now
+        },
+        description: String
+    }],
     
     // Rank information
     rank: {
@@ -119,13 +193,18 @@ const userSchema = new mongoose.Schema({
     
     // Keep track of entire downline (for matrix income calculation)
     downline: [{
-        user: {
+        userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
+            ref: 'User',
+            required: true
         },
         level: {
             type: Number,
             required: true
+        },
+        addedAt: {
+            type: Date,
+            default: Date.now
         }
     }],
     

@@ -51,6 +51,418 @@ TABLE OF CONTENTS:
    6.6 Reject Withdrawal
    6.7 Get MLM Metrics
 
+##############################################
+#              TPIN APIs                     #
+##############################################
+
+--------------------------------------------------
+5. GET ALL TPINS (ADMIN)
+--------------------------------------------------
+Endpoint: GET /api/admin/tpins
+Description: Get a list of all TPINs in the system (admin only)
+
+Request:
+```
+GET /api/admin/tpins HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 10,
+  "data": {
+    "tpins": [
+      {
+        "_id": "60d5ec9af11ab87654321001",
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "userIdCode": "LIFE10001",
+        "tpinCode": "A1B2C3",
+        "isUsed": true,
+        "status": "approved",
+        "purchaseDate": "2023-06-25T12:00:00.000Z",
+        "activationDate": "2023-06-25T14:30:00.000Z",
+        "usedAt": "2023-06-26T10:15:00.000Z"
+      },
+      // More TPINs...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+6. GET APPROVED TPINS (ADMIN)
+--------------------------------------------------
+Endpoint: GET /api/admin/tpins/approved
+Description: Get a list of all approved TPINs (admin only)
+
+Request:
+```
+GET /api/admin/tpins/approved HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 5,
+  "data": {
+    "approvedTpins": [
+      {
+        "_id": "60d5ec9af11ab87654321001",
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "userIdCode": "LIFE10001",
+        "tpinCode": "A1B2C3",
+        "isUsed": true,
+        "purchaseDate": "2023-06-25T12:00:00.000Z",
+        "activationDate": "2023-06-25T14:30:00.000Z",
+        "usedAt": "2023-06-26T10:15:00.000Z"
+      },
+      // More approved TPINs...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+7. GET REJECTED TPINS (ADMIN)
+--------------------------------------------------
+Endpoint: GET /api/admin/tpins/rejected
+Description: Get a list of all rejected TPINs (admin only)
+
+Request:
+```
+GET /api/admin/tpins/rejected HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 2,
+  "data": {
+    "rejectedTpins": [
+      {
+        "_id": "60d5ec9af11ab87654321004",
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "userIdCode": "LIFE10001",
+        "tpinCode": "J0K1L2",
+        "purchaseDate": "2023-06-26T15:45:00.000Z",
+        "rejectionReason": "Invalid payment details"
+      },
+      // More rejected TPINs...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+8. GET USED TPINS (ADMIN)
+--------------------------------------------------
+Endpoint: GET /api/admin/tpins/used
+Description: Get a list of all used TPINs (admin only)
+
+Request:
+```
+GET /api/admin/tpins/used HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 3,
+  "data": {
+    "usedTpins": [
+      {
+        "_id": "60d5ec9af11ab87654321001",
+        "userId": "60d5ec9af11ab83456789012",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "userIdCode": "LIFE10001",
+        "tpinCode": "A1B2C3",
+        "purchaseDate": "2023-06-25T12:00:00.000Z",
+        "activationDate": "2023-06-25T14:30:00.000Z",
+        "usedAt": "2023-06-26T10:15:00.000Z",
+        "status": "approved"
+      },
+      // More used TPINs...
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+9. GET USER TPIN HISTORY (ADMIN)
+--------------------------------------------------
+Endpoint: GET /api/admin/users/:userId/tpins
+Description: Get TPIN history for a specific user (admin only)
+
+Request:
+```
+GET /api/admin/users/60d5ec9af11ab83456789012/tpins HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "results": 3,
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "userId": "LIFE10001"
+    },
+    "tpins": [
+      {
+        "_id": "60d5ec9af11ab87654321001",
+        "tpinCode": "A1B2C3",
+        "isUsed": true,
+        "status": "approved",
+        "purchaseDate": "2023-06-25T12:00:00.000Z",
+        "activationDate": "2023-06-25T14:30:00.000Z",
+        "usedAt": "2023-06-26T10:15:00.000Z"
+      },
+      {
+        "_id": "60d5ec9af11ab87654321002",
+        "tpinCode": "D4E5F6",
+        "isUsed": false,
+        "status": "approved",
+        "purchaseDate": "2023-06-25T12:00:00.000Z"
+      },
+      {
+        "_id": "60d5ec9af11ab87654321003",
+        "tpinCode": "G7H8I9",
+        "isUsed": false,
+        "status": "pending",
+        "purchaseDate": "2023-06-26T15:45:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+10. GET TPIN STATISTICS (ADMIN)
+--------------------------------------------------
+Endpoint: GET /api/admin/tpins/statistics
+Description: Get TPIN statistics (admin only)
+
+Request:
+```
+GET /api/admin/tpins/statistics HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "totalTpins": 10,
+    "pendingTpins": 2,
+    "approvedTpins": 7,
+    "rejectedTpins": 1,
+    "usedTpins": 3,
+    "unusedTpins": 4,
+    "availableTpins": 4
+  }
+}
+```
+
+##############################################
+#           MLM TREE STRUCTURE APIs         #
+##############################################
+
+--------------------------------------------------
+1. GET COMPLETE MLM TREE STRUCTURE (ADMIN) - FIXED
+--------------------------------------------------
+Endpoint: GET /api/admin/mlm/tree/structure
+Description: Get complete MLM tree structure showing all hierarchical relationships (with error handling)
+
+--------------------------------------------------
+2. GET SIMPLIFIED MLM TREE STRUCTURE (ADMIN) - NEW
+--------------------------------------------------
+Endpoint: GET /api/admin/mlm/tree/simple
+Description: Get simplified MLM tree structure with better performance and error handling
+
+Request:
+```
+GET /api/admin/mlm/tree/simple HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "summary": {
+      "totalUsers": 250,
+      "activeUsers": 180,
+      "totalReferrers": 45,
+      "rootUsers": 3,
+      "maxTreeDepth": 8
+    },
+    "treeStructure": [
+      {
+        "_id": "60d5ec9af11ab83456789012",
+        "name": "John Doe",
+        "userId": "LIFE10001",
+        "email": "john@example.com",
+        "isActive": true,
+        "teamSize": 125,
+        "rank": "Executive",
+        "totalEarnings": 50000,
+        "balance": 25000,
+        "directIncome": 8000,
+        "matrixIncome": 35000,
+        "joinedAt": "2023-06-01T12:00:00.000Z",
+        "directReferralsCount": 5,
+        "directReferrals": [
+          // Nested structure continues...
+        ]
+      }
+    ]
+  }
+}
+```
+
+--------------------------------------------------
+3. GET MLM DEBUG INFO (ADMIN) - TROUBLESHOOTING
+--------------------------------------------------
+Endpoint: GET /api/admin/mlm/tree/debug
+Description: Get debugging information to troubleshoot MLM tree structure issues
+
+Request:
+```
+GET /api/admin/mlm/tree/debug HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "summary": {
+      "totalUsers": 25,
+      "usersWithReferrer": 22,
+      "usersWithReferrals": 8,
+      "rootUsersCount": 3,
+      "rootUsersWithNullReferrer": 0
+    },
+    "sampleUsers": [
+      {
+        "userId": "LIFE10001",
+        "name": "John Doe",
+        "hasReferrer": false,
+        "referralsExists": true,
+        "referralsType": "array",
+        "referralsLength": 5,
+        "incomeWalletExists": true
+      }
+    ],
+    "schemaCheck": {
+      "message": "Check if referrals field is properly populated and is an array"
+    }
+  }
+}
+```
+
+##############################################
+#           TROUBLESHOOTING GUIDE           #
+##############################################
+
+**If you get "Cannot read properties of undefined (reading 'map')" error:**
+
+1. **First, try the simplified version:**
+   ```
+   GET /api/admin/mlm/tree/simple
+   ```
+
+2. **Check your data structure:**
+   ```
+   GET /api/admin/mlm/tree/debug
+   ```
+
+3. **Common Issues:**
+   - `referrals` field is not an array
+   - `incomeWallet` field is missing
+   - Circular references in referral data
+   - Database connection issues
+
+4. **Data Integrity Check:**
+   - Ensure all users have proper `referrals` array (even if empty)
+   - Verify `incomeWallet` object exists for all users
+   - Check for orphaned referral relationships
+
+5. **Performance Considerations:**
+   - Use `/simple` endpoint for large datasets
+   - Consider pagination for networks with >1000 users
+   - Monitor memory usage with deep tree structures
+
+**Fixed Issues in Latest Version:**
+- ✅ Added null checks for undefined referrals
+- ✅ Added fallback values for missing data
+- ✅ Improved error handling and logging  
+- ✅ Added alternative simplified algorithm
+- ✅ Added debugging endpoint for troubleshooting
+
+##############################################
+#           TREE STRUCTURE FEATURES          #
+##############################################
+
+1. **Complete Hierarchy Visualization**:
+   - Shows which user is under which user
+   - Displays complete referral chains
+   - Includes earnings and performance data
+
+2. **Multi-Level Tree Structure**:
+   - Root users (users without referrers)
+   - Nested referral relationships
+   - Up to 7 levels deep for matrix income
+
+3. **Genealogy Information**:
+   - Upline chain (who referred this user)
+   - Direct downline (who this user referred)
+   - Level-wise statistics
+
+4. **Performance Metrics**:
+   - Team sizes at each level
+   - Earnings breakdown
+   - Active vs inactive users
+   - Rank distribution
+
+5. **Administrative Insights**:
+   - Tree depth analysis
+   - Level-wise user distribution
+   - Top performers identification
+   - Growth patterns analysis
+
+These APIs provide complete visibility into the MLM network structure, making it easy for administrators to understand the relationships between users and track the growth and performance of the network.
+
 ----------------------------------------------
 HOW TO USE THE API
 ----------------------------------------------
@@ -164,3 +576,43 @@ DATA MODELS
    - rejectionReason: String (optional)
 
 For more detailed implementation examples, please check the individual APDOCS files.
+
+##############################################
+#           ACCOUNT SETTINGS APIs           #
+##############################################
+
+See APDOCS_AUTH.txt for detailed documentation on these endpoints:
+
+1. GET ACCOUNT PROFILE
+   - GET /api/auth/account
+   - Get the current user's account profile
+
+2. UPDATE ACCOUNT PROFILE
+   - PUT /api/auth/account/profile
+   - Update user's profile information including name, email, mobile, Aadhaar number, PAN number, and address
+
+3. UPDATE PAYMENT METHODS
+   - PUT /api/auth/account/payment-methods
+   - Update user's payment methods for withdrawals
+
+4. CHANGE PASSWORD
+   - PUT /api/auth/account/change-password
+   - Change user's password
+
+##############################################
+#           WITHDRAWAL MANAGEMENT APIs        #
+##############################################
+
+See APDOCS_WITHDRAWAL.txt for detailed documentation on these endpoints:
+
+1. USER WITHDRAWAL APIs
+   - POST /api/mlm/withdrawal/request - Request a withdrawal
+   - GET /api/mlm/withdrawal/history - Get withdrawal history
+
+2. ADMIN WITHDRAWAL APIs
+   - GET /api/admin/withdrawals - Get all withdrawals
+   - GET /api/admin/withdrawals/:status - Get withdrawals by status
+   - GET /api/admin/withdrawals/statistics - Get withdrawal statistics
+   - GET /api/admin/users/:userId/withdrawals - Get user's withdrawals
+   - POST /api/admin/withdrawals/approve - Approve withdrawal
+   - POST /api/admin/withdrawals/reject - Reject withdrawal

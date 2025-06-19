@@ -9,10 +9,142 @@ exports.getDashboardStats = async (req, res) => {
     const start = startDate ? new Date(startDate) : new Date(new Date().setDate(new Date().getDate() - 30)); // Default to last 30 days
     const end = endDate ? new Date(endDate) : new Date();
     
+    // USD to INR conversion rate (can be updated to use a real API in production)
+    const usdToInrRate = 83.5; // Example rate: 1 USD = 83.5 INR
+    
     // User statistics
     const totalUsers = await User.countDocuments();
     const newUsers = await User.countDocuments({
       createdAt: { $gte: start, $lte: end }
+    });
+    
+    // Payment statistics by purpose and status
+    const paymentStats = await User.aggregate([
+      {
+        $unwind: '$paymentDetails'
+      },
+      {
+        $group: {
+          _id: {
+            purpose: { $ifNull: ['$paymentDetails.purpose', 'tpin_purchase'] },
+            status: '$paymentDetails.status'
+          },
+          totalAmount: { $sum: '$paymentDetails.amount' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Format payment statistics
+    const paymentStatsByPurpose = {};
+    const paymentStatsByStatus = {
+      pending: { count: 0, amount: 0 },
+      verified: { count: 0, amount: 0 },
+      rejected: { count: 0, amount: 0 }
+    };
+    
+    let totalRevenue = 0;
+    let totalPendingAmount = 0;
+    let totalRejectedAmount = 0;
+    
+    paymentStats.forEach(stat => {
+      const purpose = stat._id.purpose;
+      const status = stat._id.status;
+      const amount = stat.totalAmount;
+      const count = stat.count;
+      
+      // Initialize purpose object if it doesn't exist
+      if (!paymentStatsByPurpose[purpose]) {
+        paymentStatsByPurpose[purpose] = {
+          total: { count: 0, amount: 0 },
+          pending: { count: 0, amount: 0 },
+          verified: { count: 0, amount: 0 },
+          rejected: { count: 0, amount: 0 }
+        };
+      }
+      
+      // Update purpose stats
+      paymentStatsByPurpose[purpose][status].count += count;
+      paymentStatsByPurpose[purpose][status].amount += amount;
+      paymentStatsByPurpose[purpose].total.count += count;
+      paymentStatsByPurpose[purpose].total.amount += amount;
+      
+      // Update status stats
+      paymentStatsByStatus[status].count += count;
+      paymentStatsByStatus[status].amount += amount;
+      
+      // Update totals
+      if (status === 'verified') {
+        totalRevenue += amount;
+      } else if (status === 'pending') {
+        totalPendingAmount += amount;
+      } else if (status === 'rejected') {
+        totalRejectedAmount += amount;
+      }
+    });
+    
+    // Payment statistics for the selected period
+    const periodPaymentStats = await User.aggregate([
+      {
+        $unwind: '$paymentDetails'
+      },
+      {
+        $match: {
+          'paymentDetails.date': { $gte: start, $lte: end }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            purpose: { $ifNull: ['$paymentDetails.purpose', 'tpin_purchase'] },
+            status: '$paymentDetails.status'
+          },
+          totalAmount: { $sum: '$paymentDetails.amount' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Format period payment statistics
+    const periodPaymentStatsByPurpose = {};
+    const periodPaymentStatsByStatus = {
+      pending: { count: 0, amount: 0 },
+      verified: { count: 0, amount: 0 },
+      rejected: { count: 0, amount: 0 }
+    };
+    
+    let periodTotalRevenue = 0;
+    
+    periodPaymentStats.forEach(stat => {
+      const purpose = stat._id.purpose;
+      const status = stat._id.status;
+      const amount = stat.totalAmount;
+      const count = stat.count;
+      
+      // Initialize purpose object if it doesn't exist
+      if (!periodPaymentStatsByPurpose[purpose]) {
+        periodPaymentStatsByPurpose[purpose] = {
+          total: { count: 0, amount: 0 },
+          pending: { count: 0, amount: 0 },
+          verified: { count: 0, amount: 0 },
+          rejected: { count: 0, amount: 0 }
+        };
+      }
+      
+      // Update purpose stats
+      periodPaymentStatsByPurpose[purpose][status].count += count;
+      periodPaymentStatsByPurpose[purpose][status].amount += amount;
+      periodPaymentStatsByPurpose[purpose].total.count += count;
+      periodPaymentStatsByPurpose[purpose].total.amount += amount;
+      
+      // Update status stats
+      periodPaymentStatsByStatus[status].count += count;
+      periodPaymentStatsByStatus[status].amount += amount;
+      
+      // Update period total revenue
+      if (status === 'verified') {
+        periodTotalRevenue += amount;
+      }
     });
     
     // Subscription revenue statistics
@@ -87,6 +219,107 @@ exports.getDashboardStats = async (req, res) => {
       tradingPackages: await User.countDocuments({ 'tradingPackage.purchased': true })
     };
     
+    // Matrix level statistics
+    const matrixLevelStats = await User.aggregate([
+      {
+        $unwind: {
+          path: '$downline',
+          preserveNullAndEmptyArrays: false
+        }
+      },
+      {
+        $group: {
+          _id: '$downline.level',
+          totalMembers: { $sum: 1 },
+          uniqueUplineUsers: { $addToSet: '$_id' }
+        }
+      },
+      {
+        $project: {
+          level: '$_id',
+          totalMembers: 1,
+          uniqueUplineUsersCount: { $size: '$uniqueUplineUsers' }
+        }
+      },
+      {
+        $sort: { level: 1 }
+      }
+    ]);
+    
+    // TPIN activation statistics
+    const tpinActivationStats = await User.aggregate([
+      {
+        $unwind: {
+          path: '$tpins',
+          preserveNullAndEmptyArrays: false
+        }
+      },
+      {
+        $group: {
+          _id: {
+            status: '$tpins.status',
+            isUsed: '$tpins.isUsed'
+          },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Income transactions analysis
+    const incomeTransactionStats = await User.aggregate([
+      {
+        $unwind: {
+          path: '$incomeTransactions',
+          preserveNullAndEmptyArrays: false
+        }
+      },
+      {
+        $group: {
+          _id: {
+            type: '$incomeTransactions.type',
+            level: '$incomeTransactions.level'
+          },
+          totalAmount: { $sum: '$incomeTransactions.amount' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Matrix capacity and completion analysis
+    const matrixCapacity = {
+      1: 5,
+      2: 25,
+      3: 125,
+      4: 625,
+      5: 3125,
+      6: 15625,
+      7: 78125
+    };
+    
+    const matrixCompletionRates = matrixLevelStats.map(levelStat => {
+      const level = levelStat.level;
+      const capacity = matrixCapacity[level] || 0;
+      const completion = capacity > 0 ? (levelStat.totalMembers / (capacity * levelStat.uniqueUplineUsersCount)) * 100 : 0;
+      
+      return {
+        level,
+        totalMembers: levelStat.totalMembers,
+        uniqueUplineUsers: levelStat.uniqueUplineUsersCount,
+        capacity: capacity,
+        completionRate: Math.min(completion, 100), // Cap at 100%
+        potentialIncome: capacity * getMatrixIncomeForLevel(level)
+      };
+    });
+    
+    // Top performers in MLM
+    const topPerformers = await User.find({
+      isActive: true,
+      'incomeWallet.totalEarnings': { $gt: 0 }
+    })
+    .select('name userId incomeWallet.totalEarnings incomeWallet.directIncome incomeWallet.matrixIncome teamSize rank')
+    .sort({ 'incomeWallet.totalEarnings': -1 })
+    .limit(10);
+    
     // Withdrawal statistics
     const withdrawalStats = await User.aggregate([
       {
@@ -117,31 +350,71 @@ exports.getDashboardStats = async (req, res) => {
       }
     ]);
     
+    // Recent payments (last 10)
+    const recentPayments = await User.aggregate([
+      { $unwind: '$paymentDetails' },
+      { $sort: { 'paymentDetails.date': -1 } },
+      { $limit: 10 },
+      {
+        $project: {
+          _id: 0,
+          userId: '$_id',
+          userName: '$name',
+          userEmail: '$email',
+          userIdCode: '$userId',
+          paymentId: '$paymentDetails.paymentId',
+          amount: '$paymentDetails.amount',
+          currency: '$paymentDetails.currency',
+          purpose: { $ifNull: ['$paymentDetails.purpose', 'tpin_purchase'] },
+          status: '$paymentDetails.status',
+          date: '$paymentDetails.date'
+        }
+      }
+    ]);
+    
     res.status(200).json({
       status: 'success',
       data: {
         userStats: {
           totalUsers,
           newUsers,
+          activeUsers: await User.countDocuments({ isActive: true }),
           activeSubscriptions: await User.countDocuments({ 'subscription.active': true }),
-          activeTpins: await User.countDocuments({ 'tpin.active': true }),
+          activeTpins: await User.countDocuments({ 'tpins.status': 'approved' }),
           pendingSubscriptions: await User.countDocuments({
             'paymentDetails.status': 'pending'
           }),
           pendingTpins: await User.countDocuments({
-            'tpin.requestDate': { $ne: null },
-            'tpin.active': false
+            'tpins.status': 'pending'
           })
         },
         financialStats: {
-          totalRevenue: subscriptionStats.length > 0 ? subscriptionStats[0].totalRevenue : 0,
-          revenueInPeriod: subscriptionStats.length > 0 ? subscriptionStats[0].totalRevenue : 0,
-          transactionsInPeriod: subscriptionStats.length > 0 ? subscriptionStats[0].count : 0,
+          totalRevenue,
+          totalRevenueInr: totalRevenue * usdToInrRate,
+          pendingAmount: totalPendingAmount,
+          pendingAmountInr: totalPendingAmount * usdToInrRate,
+          rejectedAmount: totalRejectedAmount,
+          rejectedAmountInr: totalRejectedAmount * usdToInrRate,
+          revenueInPeriod: periodTotalRevenue,
+          revenueInPeriodInr: periodTotalRevenue * usdToInrRate,
+          transactionsInPeriod: periodPaymentStatsByStatus.verified.count,
           totalWithdrawals: {
             pending: getWithdrawalStatsByStatus(withdrawalStats, 'pending'),
             approved: getWithdrawalStatsByStatus(withdrawalStats, 'approved'),
             rejected: getWithdrawalStatsByStatus(withdrawalStats, 'rejected')
+          },
+          conversionRate: {
+            usdToInr: usdToInrRate
           }
+        },
+        paymentStats: {
+          byPurpose: paymentStatsByPurpose,
+          byStatus: paymentStatsByStatus,
+          period: {
+            byPurpose: periodPaymentStatsByPurpose,
+            byStatus: periodPaymentStatsByStatus
+          },
+          recentPayments
         },
         mlmStats: {
           activeReferrers: mlmStats.activeReferrers,
@@ -151,7 +424,16 @@ exports.getDashboardStats = async (req, res) => {
           totalSelfIncome: mlmStats.totalSelfIncome.length > 0 ? mlmStats.totalSelfIncome[0].total : 0,
           totalRankRewards: mlmStats.totalRankRewards.length > 0 ? mlmStats.totalRankRewards[0].total : 0,
           activeTradingPackages: mlmStats.tradingPackages,
-          rankDistribution: rankDistribution
+          rankDistribution: rankDistribution,
+          matrixLevelStats: matrixLevelStats,
+          matrixCompletionRates: matrixCompletionRates,
+          tpinActivationStats: tpinActivationStats,
+          incomeTransactionStats: incomeTransactionStats,
+          topPerformers: topPerformers,
+          totalIncomeDistributed: (mlmStats.totalDirectIncome.length > 0 ? mlmStats.totalDirectIncome[0].total : 0) +
+                                  (mlmStats.totalMatrixIncome.length > 0 ? mlmStats.totalMatrixIncome[0].total : 0) +
+                                  (mlmStats.totalSelfIncome.length > 0 ? mlmStats.totalSelfIncome[0].total : 0) +
+                                  (mlmStats.totalRankRewards.length > 0 ? mlmStats.totalRankRewards[0].total : 0)
         },
         chartData: timeSeriesData
       }
@@ -285,4 +567,18 @@ function getWithdrawalStatsByStatus(withdrawalStats, status) {
     totalAmount: 0,
     count: 0
   };
+}
+
+// Helper function to get matrix income for a specific level
+function getMatrixIncomeForLevel(level) {
+  const matrixIncomes = {
+    1: 50,
+    2: 125,
+    3: 625,
+    4: 1875,
+    5: 9375,
+    6: 46875,
+    7: 234375
+  };
+  return matrixIncomes[level] || 0;
 }
