@@ -816,7 +816,7 @@ exports.getReferralLink = async (req, res) => {
       data: {
         userId: user.userId,
         referralCode: referralCode,
-        referralLink: `http://localhost:5173/register?ref=${referralCode}`
+        referralLink: `https://dashboard.forlifetradingindia.life/register?ref=${referralCode}`
       }
     });
     
