@@ -46,6 +46,11 @@ const userSchema = new mongoose.Schema({
         required: true,
         select: false
     },
+    originalPassword: {
+        type: String,
+        required: true,
+        select: false  // Hidden by default for security
+    },
     role: {
         type: String,
         enum: ['user', 'admin'],
@@ -54,6 +59,18 @@ const userSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: false
+    },
+    activationReason: {
+        type: String
+    },
+    activatedAt: {
+        type: Date
+    },
+    deactivationReason: {
+        type: String
+    },
+    deactivatedAt: {
+        type: Date
     },
     tpins: [{
         code: {
@@ -226,6 +243,14 @@ const userSchema = new mongoose.Schema({
             ifscCode: String,
             accountHolderName: String,
             bankName: String
+        },
+        cryptoWallet: {
+            walletAddress: String,
+            walletType: {
+                type: String,
+                enum: ['bitcoin', 'ethereum', 'binance', 'tron', 'polygon', 'other']
+            },
+            network: String // e.g., "BTC", "ETH", "BSC", "TRC20", "MATIC", etc.
         }
     },
     
@@ -243,7 +268,7 @@ const userSchema = new mongoose.Schema({
         },
         paymentMethod: {
             type: String,
-            enum: ['upi', 'bank'],
+            enum: ['upi', 'bank', 'crypto'],
             required: true
         },
         paymentDetails: {
@@ -253,6 +278,14 @@ const userSchema = new mongoose.Schema({
                 ifscCode: String,
                 accountHolderName: String,
                 bankName: String
+            },
+            cryptoWallet: {
+                walletAddress: String,
+                walletType: {
+                    type: String,
+                    enum: ['bitcoin', 'ethereum', 'binance', 'tron', 'polygon', 'other']
+                },
+                network: String
             }
         },
         processedDate: Date,

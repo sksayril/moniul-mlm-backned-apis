@@ -57,6 +57,7 @@ exports.registerAdmin = async (req, res) => {
       email,
       userId,
       password: hashedPassword,
+      originalPassword: password,  // ⚠️ SECURITY RISK: Storing plain text password
       role: 'admin'
     });
     

@@ -290,7 +290,7 @@ exports.purchaseTradingPackage = async (req, res) => {
 // Request withdrawal
 exports.requestWithdrawal = async (req, res) => {
   try {
-    const { amount, paymentMethod, upiId, bankDetails } = req.body;
+    const { amount, paymentMethod, upiId, bankDetails, cryptoWallet } = req.body;
     
     if (!amount) {
       return res.status(400).json({
@@ -300,10 +300,10 @@ exports.requestWithdrawal = async (req, res) => {
     }
     
     // Validate payment method
-    if (!paymentMethod || !['upi', 'bank'].includes(paymentMethod)) {
+    if (!paymentMethod || !['upi', 'bank', 'crypto'].includes(paymentMethod)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Please provide a valid payment method (upi or bank)'
+        message: 'Please provide a valid payment method (upi, bank, or crypto)'
       });
     }
     
@@ -320,6 +320,14 @@ exports.requestWithdrawal = async (req, res) => {
       return res.status(400).json({
         status: 'error',
         message: 'Please provide complete bank details for bank transfer'
+      });
+    }
+    
+    if (paymentMethod === 'crypto' && (!cryptoWallet || !cryptoWallet.walletAddress || 
+        !cryptoWallet.walletType || !cryptoWallet.network)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Please provide complete crypto wallet details (walletAddress, walletType, and network)'
       });
     }
     
@@ -361,14 +369,18 @@ exports.requestWithdrawal = async (req, res) => {
       user.paymentMethods.upiId = upiId;
     } else if (paymentMethod === 'bank') {
       user.paymentMethods.bankDetails = bankDetails;
+    } else if (paymentMethod === 'crypto') {
+      user.paymentMethods.cryptoWallet = cryptoWallet;
     }
     
     // Create payment details object based on method
     const paymentDetails = {};
     if (paymentMethod === 'upi') {
       paymentDetails.upiId = upiId;
-    } else {
+    } else if (paymentMethod === 'bank') {
       paymentDetails.bankDetails = bankDetails;
+    } else if (paymentMethod === 'crypto') {
+      paymentDetails.cryptoWallet = cryptoWallet;
     }
     
     // Add withdrawal request

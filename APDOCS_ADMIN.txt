@@ -379,4 +379,237 @@ Success Response (200 OK):
 }
 ```
 
-Note: All admin API endpoints require the user to have the 'admin' role. If a regular user attempts to access these endpoints, they will receive a 403 Forbidden error.
+--------------------------------------------------
+NEW ADMIN USER MANAGEMENT APIs
+--------------------------------------------------
+
+⚠️ CRITICAL SECURITY WARNING ⚠️
+The following APIs contain security risks and should be used with extreme caution:
+- Storing original passwords in plain text is a major security vulnerability
+- These APIs should only be used in development or with proper security measures
+- Consider implementing proper password recovery instead of storing plain passwords
+
+--------------------------------------------------
+1. GET USER WITH ORIGINAL PASSWORD
+--------------------------------------------------
+Endpoint: GET /api/admin/users/:userId/original-password
+Description: Get user details including their original (plain text) password
+
+⚠️ SECURITY RISK: This API exposes plain text passwords!
+
+Request:
+```
+GET /api/admin/users/LIFE10001/original-password HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "email": "john@example.com",
+      "originalPassword": "UserPassword123",
+      "mobile": "9876543210",
+      "isActive": true,
+      "role": "user",
+      "rank": "Associate",
+      "teamSize": 5,
+      "createdAt": "2023-06-25T12:00:00.000Z",
+      "updatedAt": "2023-06-25T15:30:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (404 Not Found):
+```
+{
+  "status": "error",
+  "message": "User not found"
+}
+```
+
+--------------------------------------------------
+2. ACTIVATE USER
+--------------------------------------------------
+Endpoint: POST /api/admin/users/:userId/activate
+Description: Activate a user account that was previously inactive
+
+Request:
+```
+POST /api/admin/users/LIFE10001/activate HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "reason": "Account restored after review"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "User activated successfully",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "email": "john@example.com",
+      "isActive": true,
+      "activationReason": "Account restored after review",
+      "activatedAt": "2023-06-26T11:30:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "User is already active"
+}
+```
+
+--------------------------------------------------
+3. DEACTIVATE USER
+--------------------------------------------------
+Endpoint: POST /api/admin/users/:userId/deactivate
+Description: Deactivate/inactivate a user account
+
+Request:
+```
+POST /api/admin/users/LIFE10001/deactivate HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "reason": "Account suspended for policy violation"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "User deactivated successfully",
+  "data": {
+    "user": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "email": "john@example.com",
+      "isActive": false,
+      "deactivationReason": "Account suspended for policy violation",
+      "deactivatedAt": "2023-06-26T10:15:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "User is already inactive"
+}
+```
+
+--------------------------------------------------
+4. DELETE USER PERMANENTLY
+--------------------------------------------------
+Endpoint: DELETE /api/admin/users/:userId/delete
+Description: Permanently delete a user account
+
+⚠️ DANGEROUS OPERATION: This permanently deletes all user data!
+
+Request:
+```
+DELETE /api/admin/users/LIFE10001/delete HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "confirmDelete": "YES_DELETE_USER"
+}
+```
+
+Success Response (200 OK):
+```
+{
+  "status": "success",
+  "message": "User deleted permanently",
+  "data": {
+    "deletedUser": {
+      "_id": "60d5ec9af11ab83456789012",
+      "name": "John Doe",
+      "userId": "LIFE10001",
+      "email": "john@example.com",
+      "role": "user",
+      "isActive": false,
+      "teamSize": 5,
+      "totalEarnings": 2500.50,
+      "deletedAt": "2023-06-26T10:20:00.000Z"
+    }
+  }
+}
+```
+
+Error Response (400 Bad Request):
+```
+{
+  "status": "error",
+  "message": "To delete user, you must send confirmDelete: \"YES_DELETE_USER\" in request body"
+}
+```
+
+Error Response (403 Forbidden):
+```
+{
+  "status": "error",
+  "message": "Cannot delete admin users"
+}
+```
+
+--------------------------------------------------
+IMPORTANT NOTES:
+--------------------------------------------------
+
+1. **Security Warnings:**
+   - Original password API exposes plain text passwords
+   - Only use in development or with proper security measures
+   - Consider implementing password recovery instead
+
+2. **User Deletion:**
+   - Requires explicit confirmation with "YES_DELETE_USER"
+   - Cannot delete admin users
+   - Permanently removes all user data
+   - Updates MLM structure by removing user from referral chains
+
+3. **User Activation:**
+   - Sets isActive to true for inactive users
+   - Stores activation reason and timestamp
+   - Clears any previous deactivation data
+   - User can login again after activation
+
+4. **User Deactivation:**
+   - Sets isActive to false
+   - Stores deactivation reason and timestamp
+   - User cannot login when deactivated
+   - Clears any previous activation data
+
+5. **MLM Impact:**
+   - Deletion removes user from referrer's team
+   - Orphans direct referrals (removes referrer reference)
+   - Activation/deactivation keeps MLM structure intact

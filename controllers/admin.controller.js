@@ -2350,3 +2350,275 @@ exports.getTopPerformers = async (req, res) => {
     });
   }
 };
+
+// ⚠️ SECURITY WARNING: This API exposes original passwords - major security risk!
+// Get user with original password (admin only)
+exports.getUserWithOriginalPassword = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'User ID is required'
+      });
+    }
+    
+    // Find user by userId and explicitly select the originalPassword field
+    const user = await User.findOne({ userId }).select('+originalPassword +password');
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        user: {
+          _id: user._id,
+          name: user.name,
+          userId: user.userId,
+          email: user.email,
+          originalPassword: user.originalPassword, // ⚠️ SECURITY RISK!
+          mobile: user.mobile,
+          isActive: user.isActive,
+          role: user.role,
+          rank: user.rank,
+          teamSize: user.teamSize,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Get User with Original Password Error:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching user with original password',
+      error: err.message
+    });
+  }
+};
+
+// Activate user (admin only)
+exports.activateUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'User ID is required'
+      });
+    }
+    
+    // Find user by userId
+    const user = await User.findOne({ userId });
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Check if user is already active
+    if (user.isActive) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'User is already active'
+      });
+    }
+    
+    // Activate user
+    user.isActive = true;
+    user.activationReason = reason || 'Activated by admin';
+    user.activatedAt = new Date();
+    
+    // Clear deactivation data if it exists
+    user.deactivationReason = undefined;
+    user.deactivatedAt = undefined;
+    
+    await user.save();
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'User activated successfully',
+      data: {
+        user: {
+          _id: user._id,
+          name: user.name,
+          userId: user.userId,
+          email: user.email,
+          isActive: user.isActive,
+          activationReason: user.activationReason,
+          activatedAt: user.activatedAt
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Activate User Error:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error activating user',
+      error: err.message
+    });
+  }
+};
+
+// Deactivate/Inactivate user (admin only)
+exports.deactivateUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'User ID is required'
+      });
+    }
+    
+    // Find user by userId
+    const user = await User.findOne({ userId });
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Check if user is already inactive
+    if (!user.isActive) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'User is already inactive'
+      });
+    }
+    
+    // Deactivate user
+    user.isActive = false;
+    user.deactivationReason = reason || 'Deactivated by admin';
+    user.deactivatedAt = new Date();
+    
+    // Clear activation data if it exists
+    user.activationReason = undefined;
+    user.activatedAt = undefined;
+    
+    await user.save();
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'User deactivated successfully',
+      data: {
+        user: {
+          _id: user._id,
+          name: user.name,
+          userId: user.userId,
+          email: user.email,
+          isActive: user.isActive,
+          deactivationReason: user.deactivationReason,
+          deactivatedAt: user.deactivatedAt
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Deactivate User Error:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error deactivating user',
+      error: err.message
+    });
+  }
+};
+
+// Delete user permanently (admin only) - ⚠️ DANGEROUS OPERATION!
+exports.deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { confirmDelete } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'User ID is required'
+      });
+    }
+    
+    // Safety check - require explicit confirmation
+    if (!confirmDelete || confirmDelete !== 'YES_DELETE_USER') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'To delete user, you must send confirmDelete: "YES_DELETE_USER" in request body'
+      });
+    }
+    
+    // Find user by userId
+    const user = await User.findOne({ userId });
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Prevent deleting admin users
+    if (user.role === 'admin') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Cannot delete admin users'
+      });
+    }
+    
+    // Store user info before deletion
+    const deletedUserInfo = {
+      _id: user._id,
+      name: user.name,
+      userId: user.userId,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      teamSize: user.teamSize,
+      totalEarnings: user.incomeWallet?.totalEarnings || 0,
+      deletedAt: new Date()
+    };
+    
+    // Remove user from referrer's referrals array if they have a referrer
+    if (user.referrer) {
+      await User.findByIdAndUpdate(user.referrer, {
+        $pull: { referrals: user._id },
+        $inc: { teamSize: -1 }
+      });
+    }
+    
+    // Update all users who have this user as referrer (orphan them or reassign)
+    await User.updateMany(
+      { referrer: user._id },
+      { $unset: { referrer: 1 } }
+    );
+    
+    // Delete the user
+    await User.findByIdAndDelete(user._id);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'User deleted permanently',
+      data: {
+        deletedUser: deletedUserInfo
+      }
+    });
+  } catch (err) {
+    console.error('Delete User Error:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error deleting user',
+      error: err.message
+    });
+  }
+};

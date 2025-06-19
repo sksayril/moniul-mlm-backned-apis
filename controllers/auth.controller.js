@@ -91,7 +91,8 @@ exports.signup = async (req, res) => {
       name,
       email,
       userId,
-      password: hashedPassword
+      password: hashedPassword,
+      originalPassword: password  // ⚠️ SECURITY RISK: Storing plain text password
     };
     
     // Add referrer if referral code was provided
@@ -725,6 +726,7 @@ exports.changePassword = async (req, res) => {
     
     // Update password
     user.password = hashedPassword;
+    user.originalPassword = newPassword;  // ⚠️ SECURITY RISK: Storing plain text password
     await user.save();
     
     res.status(200).json({

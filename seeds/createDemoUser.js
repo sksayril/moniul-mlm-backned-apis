@@ -46,6 +46,7 @@ async function createDemoUser() {
       userId: 'LIFE10001', // This will also be used as referral code
       email: 'demo@example.com',
       password: hashedPassword,
+      originalPassword: 'Demo@123',  // ⚠️ SECURITY RISK: Storing plain text password
       isActive: true, // Make user active
       role: 'user',
       tpins: [

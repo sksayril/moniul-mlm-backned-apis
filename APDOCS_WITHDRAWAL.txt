@@ -14,6 +14,19 @@ BASE URL: http://localhost:3100
 Endpoint: POST /api/mlm/withdrawal/request
 Description: Request a withdrawal from income wallet
 
+Supported Payment Methods:
+- UPI: Unified Payments Interface
+- Bank: Bank transfer with account details
+- Crypto: Cryptocurrency wallet transfer
+
+Supported Crypto Currencies:
+- Bitcoin (BTC)
+- Ethereum (ETH) 
+- Binance Smart Chain (BSC)
+- Tron (TRC20)
+- Polygon (MATIC)
+- Other cryptocurrencies
+
 Request:
 ```
 POST /api/mlm/withdrawal/request HTTP/1.1
@@ -24,9 +37,7 @@ Content-Type: application/json
 {
   "amount": 1000,
   "paymentMethod": "upi",
-  "paymentDetails": {
-    "upiId": "user@upi"
-  }
+  "upiId": "user@upi"
 }
 ```
 
@@ -41,31 +52,128 @@ Content-Type: application/json
 {
   "amount": 1000,
   "paymentMethod": "bank",
-  "paymentDetails": {
-    "bankDetails": {
-      "accountNumber": "1234567890",
-      "ifscCode": "ABCD0001234",
-      "accountHolderName": "John Doe",
-      "bankName": "Example Bank"
-    }
+  "bankDetails": {
+    "accountNumber": "1234567890",
+    "ifscCode": "ABCD0001234",
+    "accountHolderName": "John Doe",
+    "bankName": "Example Bank"
   }
 }
 ```
 
-Success Response (200 OK):
+OR (Crypto - Bitcoin)
+
+```
+POST /api/mlm/withdrawal/request HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "amount": 1000,
+  "paymentMethod": "crypto",
+  "cryptoWallet": {
+    "walletAddress": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+    "walletType": "bitcoin",
+    "network": "BTC"
+  }
+}
+```
+
+OR (Crypto - Ethereum)
+
+```
+POST /api/mlm/withdrawal/request HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "amount": 1000,
+  "paymentMethod": "crypto",
+  "cryptoWallet": {
+    "walletAddress": "0x742d35Cc6634C0532925a3b8D431A9123C",
+    "walletType": "ethereum",
+    "network": "ETH"
+  }
+}
+```
+
+OR (Crypto - USDT TRC20)
+
+```
+POST /api/mlm/withdrawal/request HTTP/1.1
+Host: localhost:3100
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "amount": 1000,
+  "paymentMethod": "crypto",
+  "cryptoWallet": {
+    "walletAddress": "TQn9Y2khEsLJeqf19nR6g8fS1XJG5W3f28",
+    "walletType": "tron",
+    "network": "TRC20"
+  }
+}
+```
+
+Success Response (200 OK) - UPI:
 ```
 {
   "status": "success",
   "message": "Withdrawal request submitted successfully",
   "data": {
-    "withdrawal": {
-      "_id": "60d5ec9af11ab83456789012",
-      "amount": 1000,
-      "requestDate": "2023-06-15T08:30:00.000Z",
-      "status": "pending",
-      "paymentMethod": "upi",
-      "paymentDetails": {
-        "upiId": "user@upi"
+    "amount": 1000,
+    "status": "pending",
+    "requestDate": "2023-06-15T08:30:00.000Z",
+    "paymentMethod": "upi",
+    "paymentDetails": {
+      "upiId": "user@upi"
+    },
+    "remainingBalance": 4000
+  }
+}
+```
+
+Success Response (200 OK) - Bank:
+```
+{
+  "status": "success",
+  "message": "Withdrawal request submitted successfully",
+  "data": {
+    "amount": 1000,
+    "status": "pending",
+    "requestDate": "2023-06-15T08:30:00.000Z",
+    "paymentMethod": "bank",
+    "paymentDetails": {
+      "bankDetails": {
+        "accountNumber": "1234567890",
+        "ifscCode": "ABCD0001234",
+        "accountHolderName": "John Doe",
+        "bankName": "Example Bank"
+      }
+    },
+    "remainingBalance": 4000
+  }
+}
+```
+
+Success Response (200 OK) - Crypto:
+```
+{
+  "status": "success",
+  "message": "Withdrawal request submitted successfully",
+  "data": {
+    "amount": 1000,
+    "status": "pending",
+    "requestDate": "2023-06-15T08:30:00.000Z",
+    "paymentMethod": "crypto",
+    "paymentDetails": {
+      "cryptoWallet": {
+        "walletAddress": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+        "walletType": "bitcoin",
+        "network": "BTC"
       }
     },
     "remainingBalance": 4000
@@ -87,6 +195,24 @@ OR
 {
   "status": "error",
   "message": "Insufficient balance for withdrawal"
+}
+```
+
+OR
+
+```
+{
+  "status": "error",
+  "message": "Please provide a valid payment method (upi, bank, or crypto)"
+}
+```
+
+OR
+
+```
+{
+  "status": "error",
+  "message": "Please provide complete crypto wallet details (walletAddress, walletType, and network)"
 }
 ```
 
@@ -152,12 +278,16 @@ Success Response (200 OK):
         "amount": 1500,
         "requestDate": "2023-06-05T09:20:00.000Z",
         "status": "approved",
-        "paymentMethod": "upi",
+        "paymentMethod": "crypto",
         "paymentDetails": {
-          "upiId": "user@upi"
+          "cryptoWallet": {
+            "walletAddress": "0x742d35Cc6634C0532925a3b8D43A9123C",
+            "walletType": "ethereum",
+            "network": "ETH"
+          }
         },
         "processedDate": "2023-06-06T11:30:00.000Z",
-        "transactionId": "TXN987654321"
+        "transactionId": "0xabc123def456789abc123def456789abc123def456789abc123def456789abc12"
       },
       {
         "_id": "60d5ec9af11ab83456789015",
@@ -252,8 +382,8 @@ Success Response (200 OK):
   "status": "success",
   "data": {
     "summary": {
-      "pendingCount": 2,
-      "totalPendingAmount": 2500.00,
+      "pendingCount": 3,
+      "totalPendingAmount": 3300.00,
       "availableBalance": 4000.00
     },
     "pendingWithdrawals": [
@@ -279,6 +409,20 @@ Success Response (200 OK):
             "ifscCode": "ABCD0001234",
             "accountHolderName": "John Doe",
             "bankName": "Example Bank"
+          }
+        }
+      },
+      {
+        "_id": "60d5ec9af11ab83456789018",
+        "amount": 800,
+        "requestDate": "2023-06-11T09:15:00.000Z",
+        "status": "pending",
+        "paymentMethod": "crypto",
+        "paymentDetails": {
+          "cryptoWallet": {
+            "walletAddress": "TQn9Y2khEsLJeqf19nR6g8fS1XJG5W3f28",
+            "walletType": "tron",
+            "network": "TRC20"
           }
         }
       }

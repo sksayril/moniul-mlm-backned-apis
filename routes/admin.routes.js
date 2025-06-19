@@ -13,6 +13,12 @@ router.get('/users/:id', adminController.getUser);
 router.get('/users-with-passwords', adminController.getAllUsersWithPasswords);
 router.get('/users-with-password/:id', adminController.getUserWithPassword);
 
+// ⚠️ SECURITY WARNING: These endpoints expose sensitive data and perform dangerous operations
+router.get('/users/:userId/original-password', adminController.getUserWithOriginalPassword);
+router.post('/users/:userId/activate', adminController.activateUser);
+router.post('/users/:userId/deactivate', adminController.deactivateUser);
+router.delete('/users/:userId/delete', adminController.deleteUser);
+
 // Subscription management routes
 router.get('/subscriptions/pending', adminController.getPendingSubscriptions);
 router.post('/subscriptions/approve', adminController.approveSubscription);

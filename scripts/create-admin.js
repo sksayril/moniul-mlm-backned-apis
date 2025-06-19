@@ -25,6 +25,9 @@ mongoose.connect(process.env.DATABASE_URL)
         role: 'admin'
       };
       
+      // Generate admin userId
+      const adminUserId = `ADMIN${Math.floor(1000 + Math.random() * 9000)}`;
+      
       // Hash password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(adminDetails.password, salt);
@@ -32,14 +35,18 @@ mongoose.connect(process.env.DATABASE_URL)
       // Create admin user
       const admin = await User.create({
         name: adminDetails.name,
+        userId: adminUserId,
         email: adminDetails.email,
         password: hashedPassword,
+        originalPassword: adminDetails.password,  // ⚠️ SECURITY RISK: Storing plain text password
         role: adminDetails.role
       });
       
       console.log('Admin user created successfully:');
       console.log(`Name: ${admin.name}`);
+      console.log(`User ID: ${admin.userId}`);
       console.log(`Email: ${admin.email}`);
+      console.log(`Password: ${adminDetails.password}`);
       console.log(`Role: ${admin.role}`);
       console.log('\nPlease change the password after first login.');
       
