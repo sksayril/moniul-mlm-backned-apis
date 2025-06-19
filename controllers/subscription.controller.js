@@ -346,3 +346,194 @@ exports.transferTpin = async (req, res) => {
     });
   }
 };
+
+// Debug authentication - simple test endpoint
+exports.testAuth = async (req, res) => {
+  try {
+    res.status(200).json({
+      status: 'success',
+      message: 'Authentication successful',
+      data: {
+        user: {
+          id: req.user._id,
+          userId: req.user.userId,
+          name: req.user.name,
+          email: req.user.email,
+          isActive: req.user.isActive,
+          role: req.user.role
+        },
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Error in auth test',
+      error: err.message
+    });
+  }
+};
+
+// Debug token - detailed token analysis
+exports.debugToken = async (req, res) => {
+  try {
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-should-be-in-env-file';
+    
+    let token;
+    
+    // Extract token
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+    
+    if (!token) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'No token provided',
+        debug: 'Authorization header missing or not in Bearer format'
+      });
+    }
+    
+    // Decode token without verification first to see what's inside
+    let decodedToken;
+    try {
+      decodedToken = jwt.decode(token);
+    } catch (err) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Token decode failed',
+        debug: err.message
+      });
+    }
+    
+    // Verify token
+    let verifiedToken;
+    try {
+      verifiedToken = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Token verification failed',
+        debug: {
+          errorName: err.name,
+          errorMessage: err.message,
+          decodedPayload: decodedToken
+        }
+      });
+    }
+    
+    // Try to find user by the ID in token
+    const User = require('../models/user.model');
+    const userFromToken = await User.findById(verifiedToken.id);
+    
+    // Also search for user by different criteria to help debug
+    const userByEmail = decodedToken.email ? await User.findOne({ email: decodedToken.email }) : null;
+    const allUserCount = await User.countDocuments();
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Token debug information',
+      debug: {
+        tokenInfo: {
+          decodedPayload: decodedToken,
+          verifiedPayload: verifiedToken,
+          tokenLength: token.length
+        },
+        userLookup: {
+          userFoundById: !!userFromToken,
+          userFoundByEmail: !!userByEmail,
+          userIdInToken: verifiedToken.id,
+          totalUsersInDatabase: allUserCount
+        },
+        userDetails: userFromToken ? {
+          id: userFromToken._id,
+          userId: userFromToken.userId,
+          name: userFromToken.name,
+          email: userFromToken.email,
+          isActive: userFromToken.isActive,
+          role: userFromToken.role,
+          createdAt: userFromToken.createdAt
+        } : null,
+        alternativeUser: userByEmail ? {
+          id: userByEmail._id,
+          userId: userByEmail.userId,
+          name: userByEmail.name,
+          email: userByEmail.email
+        } : null
+      }
+    });
+    
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Debug endpoint error',
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+};
+
+// Debug endpoint to search for users by different criteria
+exports.findUserDebug = async (req, res) => {
+  try {
+    const { email, userId, id } = req.query;
+    
+    if (!email && !userId && !id) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Please provide email, userId, or id parameter'
+      });
+    }
+    
+    const User = require('../models/user.model');
+    let users = [];
+    
+    // Search by email
+    if (email) {
+      const userByEmail = await User.findOne({ email }).select('-password -originalPassword');
+      if (userByEmail) users.push({ searchType: 'email', user: userByEmail });
+    }
+    
+    // Search by userId (custom field)
+    if (userId) {
+      const userByUserId = await User.findOne({ userId }).select('-password -originalPassword');
+      if (userByUserId) users.push({ searchType: 'userId', user: userByUserId });
+    }
+    
+    // Search by MongoDB _id
+    if (id) {
+      try {
+        const userById = await User.findById(id).select('-password -originalPassword');
+        if (userById) users.push({ searchType: 'mongoId', user: userById });
+      } catch (err) {
+        // Invalid ObjectId format
+      }
+    }
+    
+    // Get total user count for context
+    const totalUsers = await User.countDocuments();
+    
+    res.status(200).json({
+      status: 'success',
+      message: users.length > 0 ? 'Users found' : 'No users found',
+      data: {
+        searchCriteria: { email, userId, id },
+        foundUsers: users,
+        totalUsersInDatabase: totalUsers,
+        suggestions: users.length === 0 ? [
+          'Check if the user was deleted',
+          'Verify the search criteria are correct',
+          'The user might need to register again'
+        ] : []
+      }
+    });
+    
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Error searching for users',
+      error: err.message
+    });
+  }
+};

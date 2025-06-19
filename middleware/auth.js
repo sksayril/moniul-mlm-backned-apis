@@ -40,9 +40,21 @@ exports.protect = async (req, res, next) => {
     req.user.userId = user._id;
     next();
   } catch (err) {
+    // Provide more specific error messages for debugging
+    let message = 'Not authorized to access this route';
+    
+    if (err.name === 'JsonWebTokenError') {
+      message = 'Invalid token format';
+    } else if (err.name === 'TokenExpiredError') {
+      message = 'Token has expired. Please login again';
+    } else if (err.name === 'NotBeforeError') {
+      message = 'Token not active yet';
+    }
+    
     return res.status(401).json({
       status: 'error',
-      message: 'Not authorized to access this route'
+      message: message,
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 };

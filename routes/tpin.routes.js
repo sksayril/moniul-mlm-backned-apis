@@ -9,4 +9,9 @@ router.get('/status', protect, tpinController.getTpinStatus);
 router.get('/payments', protect, tpinController.getPaymentStatus);
 router.post('/transfer', protect, tpinController.transferTpin);
 
+// Debug routes to test authentication
+router.get('/auth-test', protect, tpinController.testAuth);
+router.get('/debug-token', tpinController.debugToken); // No protect middleware - bypasses auth
+router.get('/find-user', tpinController.findUserDebug); // No protect middleware - for debugging user issues
+
 module.exports = router;

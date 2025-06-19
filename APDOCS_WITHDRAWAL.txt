@@ -37,7 +37,7 @@ Content-Type: application/json
 {
   "amount": 1000,
   "paymentMethod": "upi",
-  "upiId": "user@upi"
+    "upiId": "user@upi"
 }
 ```
 
@@ -145,14 +145,14 @@ Success Response (200 OK) - Bank:
     "amount": 1000,
     "status": "pending",
     "requestDate": "2023-06-15T08:30:00.000Z",
-    "paymentMethod": "bank",
-    "paymentDetails": {
-      "bankDetails": {
-        "accountNumber": "1234567890",
-        "ifscCode": "ABCD0001234",
-        "accountHolderName": "John Doe",
-        "bankName": "Example Bank"
-      }
+  "paymentMethod": "bank",
+  "paymentDetails": {
+    "bankDetails": {
+      "accountNumber": "1234567890",
+      "ifscCode": "ABCD0001234",
+      "accountHolderName": "John Doe",
+      "bankName": "Example Bank"
+    }
     },
     "remainingBalance": 4000
   }
@@ -165,11 +165,11 @@ Success Response (200 OK) - Crypto:
   "status": "success",
   "message": "Withdrawal request submitted successfully",
   "data": {
-    "amount": 1000,
+      "amount": 1000,
     "status": "pending",
-    "requestDate": "2023-06-15T08:30:00.000Z",
+      "requestDate": "2023-06-15T08:30:00.000Z",
     "paymentMethod": "crypto",
-    "paymentDetails": {
+      "paymentDetails": {
       "cryptoWallet": {
         "walletAddress": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
         "walletType": "bitcoin",
