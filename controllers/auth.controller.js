@@ -292,6 +292,40 @@ exports.activateAccount = async (req, res) => {
     user.incomeWallet.totalEarnings += 10;
     user.incomeWallet.lastUpdated = Date.now();
     
+    // Add random crypto coin (0.20 to 1.00 INR worth) to user's crypto wallet
+    if (!user.cryptoWallet) {
+      user.cryptoWallet = {
+        enabled: true,
+        balance: 0,
+        coin: 'MLMCoin',
+        transactions: [],
+        lastUpdated: Date.now()
+      };
+    }
+    
+    // Generate random amount between 0.20 and 1.00 INR
+    const minValue = 0.20;
+    const maxValue = 1.00;
+    const randomInrValue = Math.random() * (maxValue - minValue) + minValue;
+    const roundedValue = parseFloat(randomInrValue.toFixed(2));
+    
+    // Assume 499 MLMCoins are worth 1 INR, calculate coin amount
+    const coinRate = 499; // 499 coins = 1 INR
+    const coinAmount = roundedValue * coinRate;
+    const roundedCoinAmount = parseFloat(coinAmount.toFixed(2));
+    
+    // Add to wallet
+    user.cryptoWallet.enabled = true;
+    user.cryptoWallet.balance += roundedCoinAmount;
+    user.cryptoWallet.transactions.push({
+        amount: roundedCoinAmount,
+        type: 'activation_bonus',
+        description: `Account activation bonus (${roundedValue} INR worth)`,
+        inrValue: roundedValue,
+        createdAt: Date.now()
+    });
+    user.cryptoWallet.lastUpdated = Date.now();
+    
     await user.save();
     
     // Process MLM income if user has a referrer
@@ -301,11 +335,16 @@ exports.activateAccount = async (req, res) => {
     
     res.status(200).json({
       status: 'success',
-      message: 'Account activated successfully with ₹10 self-income added',
+      message: 'Account activated successfully with ₹10 self-income added and crypto coins bonus',
       data: {
         isActive: user.isActive,
         incomeAdded: 10,
-        currentBalance: user.incomeWallet.balance
+        currentBalance: user.incomeWallet.balance,
+        cryptoWallet: {
+          coin: user.cryptoWallet.coin,
+          balance: user.cryptoWallet.balance,
+          inrValue: user.cryptoWallet.transactions.find(t => t.type === 'activation_bonus')?.inrValue || 0
+        }
       }
     });
   } catch (err) {

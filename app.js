@@ -16,6 +16,11 @@ const adminAuthRouter = require('./routes/admin.auth.routes');
 const mlmRouter = require('./routes/mlm.routes');
 const mlmAdminRouter = require('./routes/mlm.admin.routes');
 const adminDashboardRouter = require('./routes/admin.dashboard.routes');
+const investmentRouter = require('./routes/investment.routes');
+const adminInvestmentRouter = require('./routes/admin.investment.routes');
+const adminTpinRouter = require('./routes/admin.tpin.routes');
+const cryptoRouter = require('./routes/crypto.routes');
+const adminCryptoRouter = require('./routes/admin.crypto.routes');
 
 const app = express();
 
@@ -53,6 +58,21 @@ app.use('/api/admin', adminRouter);
 app.use('/api/mlm', mlmRouter);
 app.use('/api/admin/mlm', mlmAdminRouter);
 app.use('/api/admin/dashboard', adminDashboardRouter);
+
+// Investment routes
+app.use('/api/investment', investmentRouter);
+app.use('/api/admin/investment', adminInvestmentRouter);
+
+// Admin TPIN routes
+app.use('/api/admin/tpin', adminTpinRouter);
+
+// Crypto routes
+app.use('/api/crypto', cryptoRouter);
+app.use('/api/admin/crypto', adminCryptoRouter);
+
+// Start investment scheduler
+const investmentScheduler = require('./services/investment.scheduler');
+investmentScheduler.startInvestmentScheduler();
 
 // Error handling middleware
 app.use((err, req, res, next) => {

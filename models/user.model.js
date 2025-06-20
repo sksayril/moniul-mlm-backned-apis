@@ -100,7 +100,7 @@ const userSchema = new mongoose.Schema({
         currency: String,
         purpose: {
             type: String,
-            enum: ['tpin_purchase', 'subscription', 'trading_package'],
+            enum: ['tpin_purchase', 'subscription', 'trading_package', 'investment_wallet'],
             default: 'tpin_purchase'
         },
         quantity: {
@@ -118,7 +118,12 @@ const userSchema = new mongoose.Schema({
             type: Date,
             default: Date.now
         },
-        rejectionReason: String
+        rejectionReason: String,
+        approvedAt: Date,
+        approvedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }
     }],
     
     // MLM System Fields
@@ -174,11 +179,81 @@ const userSchema = new mongoose.Schema({
         }
     },
     
+    // Investment Wallet System
+    investmentWallet: {
+        balance: {
+            type: Number,
+            default: 0
+        },
+        totalInvested: {
+            type: Number,
+            default: 0
+        },
+        totalMatured: {
+            type: Number,
+            default: 0
+        },
+        totalReturns: {
+            type: Number,
+            default: 0
+        },
+        lastUpdated: {
+            type: Date,
+            default: Date.now
+        }
+    },
+    
+    // Investment transactions
+    investments: [{
+        investmentId: {
+            type: String,
+            required: true,
+            unique: true
+        },
+        amount: {
+            type: Number,
+            required: true
+        },
+        startDate: {
+            type: Date,
+            default: Date.now
+        },
+        maturityDate: {
+            type: Date
+        },
+        returnAmount: {
+            type: Number,
+            default: 0
+        },
+        status: {
+            type: String,
+            enum: ['active', 'matured', 'cancelled'],
+            default: 'active'
+        },
+        daysCompleted: {
+            type: Number,
+            default: 0
+        },
+        totalDays: {
+            type: Number,
+            default: 35
+        },
+        dailyReturn: {
+            type: Number,
+            default: 0
+        },
+        maturedAt: Date,
+        lastProcessed: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    
     // Income transaction history
     incomeTransactions: [{
         type: {
             type: String,
-            enum: ['self_income', 'direct_income', 'matrix_income', 'rank_reward', 'fx_trading', 'withdrawal'],
+            enum: ['self_income', 'direct_income', 'matrix_income', 'rank_reward', 'fx_trading', 'withdrawal', 'investment_return', 'investment_maturity'],
             required: true
         },
         amount: {
@@ -190,6 +265,7 @@ const userSchema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User'
         },
+        investmentId: String, // For investment-related transactions
         date: {
             type: Date,
             default: Date.now
@@ -234,6 +310,74 @@ const userSchema = new mongoose.Schema({
         startDate: Date,
         expectedReturn: Number
     },
+    
+    // Crypto wallet (automatically given after TPIN activation)
+    cryptoWallet: {
+        enabled: {
+            type: Boolean,
+            default: false
+        },
+        balance: {
+            type: Number,
+            default: 0
+        },
+        coin: {
+            type: String,
+            default: 'MLMCoin'
+        },
+        transactions: [{
+            amount: {
+                type: Number,
+                required: true
+            },
+            type: {
+                type: String,
+                enum: ['activation_bonus', 'referral_bonus', 'admin_gift', 'purchase', 'transfer'],
+                required: true
+            },
+            description: String,
+            inrValue: Number, // Value in INR at time of transaction
+            createdAt: {
+                type: Date,
+                default: Date.now
+            }
+        }],
+        lastUpdated: {
+            type: Date,
+            default: Date.now
+        }
+    },
+    
+    // Crypto purchase and sell requests
+    cryptoRequests: [{
+        type: {
+            type: String,
+            enum: ['purchase', 'sell'],
+            required: true
+        },
+        coinValue: {
+            type: Number,
+            required: true
+        },
+        quantity: {
+            type: Number,
+            required: true
+        },
+        totalAmount: {
+            type: Number,
+            required: true
+        },
+        status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'pending'
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        },
+        updatedAt: Date
+    }],
     
     // User payment methods for withdrawals
     paymentMethods: {
