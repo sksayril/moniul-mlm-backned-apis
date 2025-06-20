@@ -49,7 +49,7 @@ exports.getCryptoWallet = async (req, res) => {
   }
 };
 
-// Get user's crypto wallet transaction history
+// Get user's crypto wallet transaction history including buy/sell requests
 exports.getCryptoTransactions = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -61,25 +61,66 @@ exports.getCryptoTransactions = async (req, res) => {
       });
     }
     
-    // If crypto wallet doesn't exist yet, initialize it
-    if (!user.cryptoWallet || !user.cryptoWallet.transactions) {
-      return res.status(200).json({
-        status: 'success',
-        data: {
-          transactions: []
-        }
-      });
-    }
+    // Initialize empty arrays if they don't exist
+    const walletTransactions = user.cryptoWallet?.transactions || [];
+    const cryptoRequests = user.cryptoRequests || [];
     
-    // Sort transactions by date (newest first)
-    const transactions = user.cryptoWallet.transactions.sort((a, b) => 
+    // Format wallet transactions
+    const formattedWalletTransactions = walletTransactions.map(transaction => ({
+      _id: transaction._id,
+      type: 'wallet_transaction',
+      transactionType: transaction.type,
+      amount: transaction.amount,
+      description: transaction.description,
+      inrValue: transaction.inrValue,
+      createdAt: transaction.createdAt,
+      status: 'completed'
+    }));
+    
+    // Format crypto requests (buy/sell requests)
+    const formattedCryptoRequests = cryptoRequests.map(request => ({
+      _id: request._id,
+      type: 'crypto_request',
+      transactionType: request.type, // 'purchase' or 'sell'
+      coinValue: request.coinValue,
+      quantity: request.quantity,
+      totalAmount: request.totalAmount,
+      description: request.type === 'purchase' 
+        ? `Purchase request for ${request.quantity} coins at ₹${request.coinValue} each`
+        : `Sell request for ${request.quantity} coins at ₹${request.coinValue} each`,
+      status: request.status,
+      createdAt: request.createdAt,
+      updatedAt: request.updatedAt
+    }));
+    
+    // Combine all transactions
+    const allTransactions = [
+      ...formattedWalletTransactions,
+      ...formattedCryptoRequests
+    ];
+    
+    // Sort by date (newest first)
+    const sortedTransactions = allTransactions.sort((a, b) => 
       new Date(b.createdAt) - new Date(a.createdAt)
     );
+    
+    // Calculate summary statistics
+    const summary = {
+      totalWalletTransactions: formattedWalletTransactions.length,
+      totalCryptoRequests: formattedCryptoRequests.length,
+      pendingRequests: cryptoRequests.filter(req => req.status === 'pending').length,
+      approvedRequests: cryptoRequests.filter(req => req.status === 'approved').length,
+      rejectedRequests: cryptoRequests.filter(req => req.status === 'rejected').length,
+      totalPurchaseRequests: cryptoRequests.filter(req => req.type === 'purchase').length,
+      totalSellRequests: cryptoRequests.filter(req => req.type === 'sell').length
+    };
     
     res.status(200).json({
       status: 'success',
       data: {
-        transactions
+        transactions: sortedTransactions,
+        summary,
+        totalTransactions: sortedTransactions.length
       }
     });
   } catch (err) {

@@ -42,7 +42,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 
 **Endpoint**: `GET /api/crypto/transactions`
 
-**Description**: Returns the user's crypto wallet transaction history.
+**Description**: Returns the user's complete crypto transaction history including wallet transactions and buy/sell requests.
 
 **Authentication**: Required
 
@@ -53,16 +53,63 @@ Authorization: Bearer YOUR_JWT_TOKEN
   "data": {
     "transactions": [
       {
+        "_id": "transaction_id",
+        "type": "wallet_transaction",
+        "transactionType": "activation_bonus",
         "amount": 249.50,
-        "type": "activation_bonus",
         "description": "Account activation bonus (0.50 INR worth)",
         "inrValue": 0.50,
-        "createdAt": "2023-07-15T10:30:45.123Z"
+        "createdAt": "2023-07-15T10:30:45.123Z",
+        "status": "completed"
+      },
+      {
+        "_id": "request_id",
+        "type": "crypto_request",
+        "transactionType": "purchase",
+        "coinValue": 2.50,
+        "quantity": 100,
+        "totalAmount": 250,
+        "description": "Purchase request for 100 coins at ₹2.50 each",
+        "status": "pending",
+        "createdAt": "2024-01-21T14:20:00.000Z",
+        "updatedAt": "2024-01-21T14:20:00.000Z"
+      },
+      {
+        "_id": "request_id2",
+        "type": "crypto_request",
+        "transactionType": "sell",
+        "coinValue": 3.00,
+        "quantity": 50,
+        "totalAmount": 150,
+        "description": "Sell request for 50 coins at ₹3.00 each",
+        "status": "approved",
+        "createdAt": "2024-01-22T09:15:00.000Z",
+        "updatedAt": "2024-01-22T10:30:00.000Z"
       }
-    ]
+    ],
+    "summary": {
+      "totalWalletTransactions": 1,
+      "totalCryptoRequests": 2,
+      "pendingRequests": 1,
+      "approvedRequests": 1,
+      "rejectedRequests": 0,
+      "totalPurchaseRequests": 1,
+      "totalSellRequests": 1
+    },
+    "totalTransactions": 3
   }
 }
 ```
+
+**Transaction Types:**
+- `wallet_transaction`: Direct wallet transactions (activation bonus, admin gifts, etc.)
+- `crypto_request`: Buy/sell requests submitted by user
+
+**Transaction Statuses:**
+- `completed`: For wallet transactions
+- `pending`: Request awaiting admin approval
+- `approved`: Request approved by admin
+- `rejected`: Request rejected by admin
 
 ### 3. Get Crypto System Statistics (Admin Only)
 
