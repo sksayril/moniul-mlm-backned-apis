@@ -21,6 +21,7 @@ const adminInvestmentRouter = require('./routes/admin.investment.routes');
 const adminTpinRouter = require('./routes/admin.tpin.routes');
 const cryptoRouter = require('./routes/crypto.routes');
 const adminCryptoRouter = require('./routes/admin.crypto.routes');
+const adminBlockRouter = require('./routes/admin.block.routes');
 
 const app = express();
 
@@ -69,6 +70,9 @@ app.use('/api/admin/tpin', adminTpinRouter);
 // Crypto routes
 app.use('/api/crypto', cryptoRouter);
 app.use('/api/admin/crypto', adminCryptoRouter);
+
+// Admin block/unblock routes
+app.use('/api/admin/block', adminBlockRouter);
 
 // Start investment scheduler
 const investmentScheduler = require('./services/investment.scheduler');

@@ -60,6 +60,20 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    blocked: {
+        type: Boolean,
+        default: false
+    },
+    blockedAt: {
+        type: Date
+    },
+    blockedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    blockReason: {
+        type: String
+    },
     activationReason: {
         type: String
     },
