@@ -309,7 +309,7 @@ const userSchema = new mongoose.Schema({
     incomeTransactions: [{
         type: {
             type: String,
-            enum: ['self_income', 'direct_income', 'matrix_income', 'daily_income', 'rank_reward', 'fx_trading', 'withdrawal', 'investment_return', 'investment_maturity'],
+            enum: ['self_income', 'direct_income', 'matrix_income', 'daily_income', 'daily_matrix_income', 'rank_reward', 'fx_trading', 'withdrawal', 'investment_return', 'investment_maturity'],
             required: true
         },
         amount: {
@@ -332,7 +332,7 @@ const userSchema = new mongoose.Schema({
     // Rank information
     rank: {
         type: String,
-        enum: ['Newcomer', 'Associate', 'Senior', 'Manager', 'Director', 'Executive'],
+        enum: ['Newcomer', 'BRONZE', 'SILVER', 'GOLD', 'RUBY', 'DIAMOND', 'PLATINUM', 'KING'],
         default: 'Newcomer'
     },
     teamSize: {

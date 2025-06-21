@@ -183,6 +183,70 @@ exports.signin = async (req, res) => {
   }
 };
 
+// Check TPIN activation status and eligibility
+exports.checkTPINStatus = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    // Check if account is already active
+    if (user.isActive) {
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          accountStatus: 'active',
+          isActive: true,
+          activatedAt: user.activatedAt,
+          message: 'Your account is already activated'
+        }
+      });
+    }
+    
+    // Check available TPINs
+    const availableTPINs = user.tpins.filter(tpin => 
+      tpin.status === 'approved' && !tpin.isUsed
+    );
+    
+    const pendingTPINs = user.tpins.filter(tpin => 
+      tpin.status === 'pending' && !tpin.isUsed
+    );
+    
+    const usedTPINs = user.tpins.filter(tpin => tpin.isUsed);
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        accountStatus: 'inactive',
+        isActive: false,
+        canActivate: availableTPINs.length > 0,
+        tpinSummary: {
+          available: availableTPINs.length,
+          pending: pendingTPINs.length,
+          used: usedTPINs.length,
+          total: user.tpins.length
+        },
+        activationBonus: '₹10 instant bonus on first activation',
+        instructions: availableTPINs.length > 0 
+          ? 'You have approved TPINs available. Use any TPIN code to activate your account.'
+          : 'No approved TPINs available. Please purchase a TPIN and wait for admin approval.'
+      }
+    });
+    
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Error checking TPIN status',
+      error: err.message
+    });
+  }
+};
+
 // Get current user profile
 exports.getMe = async (req, res) => {
   try {
@@ -256,6 +320,48 @@ exports.getMe = async (req, res) => {
       totalEarnings: updatedUser.incomeWallet?.totalEarnings || 0,
       withdrawnAmount: updatedUser.incomeWallet?.withdrawnAmount || 0
     };
+
+    // Calculate rank progress and rewards
+    const directReferrals = await User.countDocuments({
+      referrer: updatedUser._id,
+      isActive: true
+    });
+
+    const rankStructure = [
+      { rank: 'BRONZE', members: 25, reward: 500, description: '₹500 + ID Card' },
+      { rank: 'SILVER', members: 50, reward: 1000, description: '₹1000 + Bag' },
+      { rank: 'GOLD', members: 100, reward: 2500, description: '₹2500 + Mobile Phone' },
+      { rank: 'RUBY', members: 200, reward: 10000, description: '₹10000 + Mobile Phone + Tour' },
+      { rank: 'DIAMOND', members: 400, reward: 15000, description: '₹15K + India Tour' },
+      { rank: 'PLATINUM', members: 800, reward: 25000, description: '₹25K + International Tour' },
+      { rank: 'KING', members: 1600, reward: 60000, description: '₹60K + Bike + International Tour' }
+    ];
+
+    const currentRank = updatedUser.rank || 'Newcomer';
+    const nextRank = rankStructure.find(rank => directReferrals < rank.members);
+    
+    const rankRewardStats = {
+      currentRank,
+      directReferrals,
+      totalRankRewards: updatedUser.incomeWallet?.rankRewards || 0,
+      nextRank: nextRank ? {
+        rank: nextRank.rank,
+        requiredMembers: nextRank.members,
+        reward: nextRank.reward,
+        description: nextRank.description,
+        membersNeeded: nextRank.members - directReferrals,
+        progress: `${directReferrals}/${nextRank.members}`,
+        progressPercentage: ((directReferrals / nextRank.members) * 100).toFixed(1)
+      } : null,
+      achievedRanks: updatedUser.incomeTransactions?.filter(t => 
+        t.type === 'rank_reward'
+      ).map(t => ({
+        rank: t.description.split(' ')[0],
+        amount: t.amount,
+        date: t.date,
+        description: t.description
+      })) || []
+    };
     
     res.status(200).json({
       status: 'success',
@@ -265,6 +371,7 @@ exports.getMe = async (req, res) => {
         dailyIncomeStats,
         matrixStats,
         incomeBreakdown,
+        rankRewardStats,
         recentTransactions
       }
     });
@@ -340,44 +447,72 @@ exports.activateAccount = async (req, res) => {
     
     const user = await User.findById(req.user.id);
     
-    // Find the TPIN with matching code
-    const tpinIndex = user.tpins.findIndex(tpin => 
-      tpin.code === tpinCode && 
-      tpin.status === 'approved' && 
-      !tpin.isUsed
-    );
-    
-    if (tpinIndex === -1) {
+    // Check if account is already active
+    if (user.isActive) {
       return res.status(400).json({
         status: 'error',
-        message: 'Invalid or already used TPIN'
+        message: 'Account is already activated'
       });
     }
+    
+    // Validate TPIN code
+    const tpinValidation = validateTPINCode(user.tpins, tpinCode);
+    
+    if (!tpinValidation.valid) {
+      return res.status(400).json({
+        status: 'error',
+        message: `TPIN activation failed: ${tpinValidation.reason}`,
+        hint: 'Please check your TPIN code or contact admin if the issue persists'
+      });
+    }
+    
+    const tpinIndex = tpinValidation.index;
     
     // Mark TPIN as used and account as active
     user.tpins[tpinIndex].isUsed = true;
     user.tpins[tpinIndex].usedAt = Date.now();
     user.tpins[tpinIndex].activationDate = Date.now();
     user.isActive = true;
+    user.activatedAt = Date.now();
+    user.activationReason = 'TPIN Code Activation';
     
-    // Add self-income for TPIN activation (₹10)
+    // Initialize income wallet if not exists
     if (!user.incomeWallet) {
       user.incomeWallet = {
         balance: 0,
         selfIncome: 0,
         directIncome: 0,
         matrixIncome: 0,
+        dailyIncome: 0,
+        dailyTeamIncome: 0,
         rankRewards: 0,
+        fxTradingIncome: 0,
         totalEarnings: 0,
         withdrawnAmount: 0,
         lastUpdated: Date.now()
       };
     }
     
-    user.incomeWallet.selfIncome += 10;
-    user.incomeWallet.balance += 10;
-    user.incomeWallet.totalEarnings += 10;
+    // Add ₹10 instant activation bonus for first-time TPIN activation
+    const ACTIVATION_BONUS = 10;
+    user.incomeWallet.selfIncome += ACTIVATION_BONUS;
+    user.incomeWallet.dailyIncome += ACTIVATION_BONUS; // Also add to daily income
+    user.incomeWallet.balance += ACTIVATION_BONUS;
+    user.incomeWallet.totalEarnings += ACTIVATION_BONUS;
+    user.incomeWallet.lastDailyIncome = Date.now(); // Mark as received daily income
     user.incomeWallet.lastUpdated = Date.now();
+    
+    // Add transaction record for activation bonus
+    if (!user.incomeTransactions) {
+      user.incomeTransactions = [];
+    }
+    
+    user.incomeTransactions.push({
+      type: 'self_income',
+      amount: ACTIVATION_BONUS,
+      date: Date.now(),
+      description: 'Account activation bonus for first TPIN activation (added to self-income and daily income)'
+    });
     
     // Add random crypto coin (0.20 to 1.00 INR worth) to user's crypto wallet
     if (!user.cryptoWallet) {
@@ -415,27 +550,56 @@ exports.activateAccount = async (req, res) => {
     
     await user.save();
     
+    // Log successful activation
+    console.log(`🎉 Account activated: ${user.name} (${user.userId}) - TPIN: ${tpinCode} - Bonus: ₹${ACTIVATION_BONUS}`);
+    
     // Process MLM income if user has a referrer
     if (user.referrer) {
+      console.log(`Processing MLM income for referrer chain starting from: ${user.referrer}`);
       await processMLMIncomeOnActivation(user._id, user.referrer);
       
       // Process new matrix income system
       const { processMatrixIncome } = require('./matrix.controller');
       await processMatrixIncome(user._id, user.referrer);
+      
+      // Process rank rewards for referrer chain
+      await processRankRewards(user.referrer);
+      
+      console.log(`MLM, matrix income, and rank rewards processing completed for: ${user.userId}`);
+    } else {
+      console.log(`No referrer found for user: ${user.userId} - No MLM income to process`);
     }
     
     res.status(200).json({
       status: 'success',
-      message: 'Account activated successfully with ₹10 self-income added and crypto coins bonus',
+      message: '🎉 Account activated successfully! ₹10 instant bonus credited to your wallet',
       data: {
         isActive: user.isActive,
-        incomeAdded: 10,
-        currentBalance: user.incomeWallet.balance,
+        activatedAt: user.activatedAt,
+        tpinUsed: tpinCode,
+        instantBonus: {
+          amount: ACTIVATION_BONUS,
+          type: 'Activation Bonus',
+          description: 'First-time account activation reward (added to both self-income and daily income)'
+        },
+        incomeWallet: {
+          currentBalance: user.incomeWallet.balance,
+          selfIncome: user.incomeWallet.selfIncome,
+          dailyIncome: user.incomeWallet.dailyIncome,
+          totalEarnings: user.incomeWallet.totalEarnings
+        },
         cryptoWallet: {
+          enabled: true,
           coin: user.cryptoWallet.coin,
           balance: user.cryptoWallet.balance,
-          inrValue: user.cryptoWallet.transactions.find(t => t.type === 'activation_bonus')?.inrValue || 0
-        }
+          bonusInrValue: user.cryptoWallet.transactions.find(t => t.type === 'activation_bonus')?.inrValue || 0
+        },
+        nextSteps: [
+          'Start referring friends using your User ID as referral code',
+          'Earn ₹50 for each successful referral',
+          'Receive ₹10 daily income for active account',
+          'Participate in matrix income program'
+        ]
       }
     });
   } catch (err) {
@@ -447,31 +611,102 @@ exports.activateAccount = async (req, res) => {
   }
 };
 
+// Helper function to validate TPIN code
+const validateTPINCode = (tpins, tpinCode) => {
+  const tpinIndex = tpins.findIndex(tpin => 
+    tpin.code === tpinCode && 
+    tpin.status === 'approved' && 
+    !tpin.isUsed
+  );
+  
+  if (tpinIndex === -1) {
+    // Check specific reasons for failure
+    const matchingTpin = tpins.find(tpin => tpin.code === tpinCode);
+    if (!matchingTpin) {
+      return { valid: false, reason: 'TPIN code not found' };
+    }
+    if (matchingTpin.status !== 'approved') {
+      return { valid: false, reason: 'TPIN not approved yet' };
+    }
+    if (matchingTpin.isUsed) {
+      return { valid: false, reason: 'TPIN already used' };
+    }
+  }
+  
+  return { valid: true, index: tpinIndex };
+};
+
 // Process MLM income when user activates TPIN
 const processMLMIncomeOnActivation = async (userId, referrerId) => {
   try {
-    // Add direct referral income to immediate referrer (₹20)
+    console.log(`Processing direct referral income for referrer: ${referrerId}`);
+    
+    // Add direct referral income to immediate referrer (₹50)
     const directReferrer = await User.findById(referrerId);
-    if (directReferrer && directReferrer.isActive) {
-      if (!directReferrer.incomeWallet) {
-        directReferrer.incomeWallet = {
-          balance: 0,
-          selfIncome: 0,
-          directIncome: 0,
-          matrixIncome: 0,
-          rankRewards: 0,
-          totalEarnings: 0,
-          withdrawnAmount: 0,
-          lastUpdated: Date.now()
-        };
-      }
-      
-      directReferrer.incomeWallet.directIncome += 20;
-      directReferrer.incomeWallet.balance += 20;
-      directReferrer.incomeWallet.totalEarnings += 20;
-      directReferrer.incomeWallet.lastUpdated = Date.now();
-      await directReferrer.save();
+    if (!directReferrer) {
+      console.log(`Referrer not found: ${referrerId}`);
+      return;
     }
+    
+    if (!directReferrer.isActive) {
+      console.log(`Referrer ${directReferrer.userId} is not active, skipping direct income`);
+      return;
+    }
+    
+    console.log(`Adding ₹50 direct income to referrer: ${directReferrer.name} (${directReferrer.userId})`);
+    
+    // Initialize income wallet if not exists
+    if (!directReferrer.incomeWallet) {
+      directReferrer.incomeWallet = {
+        balance: 0,
+        selfIncome: 0,
+        directIncome: 0,
+        matrixIncome: 0,
+        dailyIncome: 0,
+        dailyTeamIncome: 0,
+        rankRewards: 0,
+        fxTradingIncome: 0,
+        totalEarnings: 0,
+        withdrawnAmount: 0,
+        lastUpdated: Date.now()
+      };
+    }
+    
+    // Store previous values for logging
+    const previousDirectIncome = directReferrer.incomeWallet.directIncome || 0;
+    const previousBalance = directReferrer.incomeWallet.balance || 0;
+    const previousTotalEarnings = directReferrer.incomeWallet.totalEarnings || 0;
+    
+    // Add ₹50 direct referral income
+    const DIRECT_REFERRAL_BONUS = 50;
+    directReferrer.incomeWallet.directIncome = (directReferrer.incomeWallet.directIncome || 0) + DIRECT_REFERRAL_BONUS;
+    directReferrer.incomeWallet.balance = (directReferrer.incomeWallet.balance || 0) + DIRECT_REFERRAL_BONUS;
+    directReferrer.incomeWallet.totalEarnings = (directReferrer.incomeWallet.totalEarnings || 0) + DIRECT_REFERRAL_BONUS;
+    directReferrer.incomeWallet.lastUpdated = Date.now();
+    
+    // Add transaction record for direct referral income
+    if (!directReferrer.incomeTransactions) {
+      directReferrer.incomeTransactions = [];
+    }
+    
+    // Get activated user info for transaction description
+    const activatedUser = await User.findById(userId);
+    const activatedUserInfo = activatedUser ? `${activatedUser.name} (${activatedUser.userId})` : `User ID: ${userId}`;
+    
+    directReferrer.incomeTransactions.push({
+      type: 'direct_income',
+      amount: DIRECT_REFERRAL_BONUS,
+      fromUser: userId,
+      date: Date.now(),
+      description: `Direct referral income from ${activatedUserInfo} account activation`
+    });
+    
+    await directReferrer.save();
+    
+    console.log(`✅ ₹${DIRECT_REFERRAL_BONUS} direct income processed for referrer: ${directReferrer.userId}`);
+    console.log(`   Previous directIncome: ₹${previousDirectIncome} → New directIncome: ₹${directReferrer.incomeWallet.directIncome}`);
+    console.log(`   Previous balance: ₹${previousBalance} → New balance: ₹${directReferrer.incomeWallet.balance}`);
+    console.log(`   Previous totalEarnings: ₹${previousTotalEarnings} → New totalEarnings: ₹${directReferrer.incomeWallet.totalEarnings}`);
     
     // Process matrix income for up to 7 levels
     await processMatrixIncomeOnActivation(userId, referrerId);
@@ -495,15 +730,15 @@ const processMatrixIncomeOnActivation = async (newUserId, currentReferrerId, lev
       return;
     }
     
-    // Matrix income amounts for each level
+    // Matrix income amounts for each level (based on provided table)
     const matrixIncomes = {
-      1: 5,   // ₹50 for 1st level (5 members)
-      2: 4,  // ₹125 for 2nd level (25 members)
-      3: 3,  // ₹625 for 3rd level (125 members)
-      4: 2, // ₹1875 for 4th level (625 members)
-      5: 2, // ₹9375 for 5th level (3125 members)
-      6: 2,    // ₹46875 for 6th level (15625 members)
-      7: 2    // ₹234375 for 7th level (78125 members)
+      1: 50,      // ₹50 for 1st level (5 members)
+      2: 125,     // ₹125 for 2nd level (25 members)
+      3: 625,     // ₹625 for 3rd level (125 members)
+      4: 1875,    // ₹1875 for 4th level (625 members)
+      5: 9375,    // ₹9375 for 5th level (3125 members)
+      6: 46875,   // ₹46875 for 6th level (15625 members)
+      7: 234375   // ₹234375 for 7th level (78125 members)
     };
     
     // Matrix capacity for each level
@@ -538,25 +773,46 @@ const processMatrixIncomeOnActivation = async (newUserId, currentReferrerId, lev
     // Count current level members
     const currentLevelCount = uplineUser.downline.filter(entry => entry.level === level).length;
     
-    // Check if this level is complete and award income
-    if (currentLevelCount <= matrixCapacity[level]) {
+    console.log(`Matrix Level ${level}: User ${uplineUser.userId} has ${currentLevelCount}/${matrixCapacity[level]} members`);
+    
+    // Check if user has already received this level's matrix income
+    const alreadyReceivedThisLevel = uplineUser.incomeTransactions && 
+      uplineUser.incomeTransactions.some(transaction => 
+        transaction.type === 'matrix_income' && 
+        transaction.level === level
+      );
+    
+    // Check if this level is complete and award income (only once per level)
+    if (currentLevelCount >= matrixCapacity[level] && !alreadyReceivedThisLevel) {
+      console.log(`🎉 Matrix Level ${level} COMPLETED for user ${uplineUser.userId}! Awarding ₹${matrixIncomes[level]}`);
+      console.log(`   Achieved: ${currentLevelCount}/${matrixCapacity[level]} members (threshold reached)`);
+      
+      // Initialize income wallet if not exists
       if (!uplineUser.incomeWallet) {
         uplineUser.incomeWallet = {
           balance: 0,
           selfIncome: 0,
           directIncome: 0,
           matrixIncome: 0,
+          dailyIncome: 0,
+          dailyTeamIncome: 0,
           rankRewards: 0,
+          fxTradingIncome: 0,
           totalEarnings: 0,
           withdrawnAmount: 0,
           lastUpdated: Date.now()
         };
       }
       
+      // Store previous values for logging
+      const previousMatrixIncome = uplineUser.incomeWallet.matrixIncome || 0;
+      const previousBalance = uplineUser.incomeWallet.balance || 0;
+      const previousTotalEarnings = uplineUser.incomeWallet.totalEarnings || 0;
+      
       const incomeAmount = matrixIncomes[level];
-      uplineUser.incomeWallet.matrixIncome += incomeAmount;
-      uplineUser.incomeWallet.balance += incomeAmount;
-      uplineUser.incomeWallet.totalEarnings += incomeAmount;
+      uplineUser.incomeWallet.matrixIncome = (uplineUser.incomeWallet.matrixIncome || 0) + incomeAmount;
+      uplineUser.incomeWallet.balance = (uplineUser.incomeWallet.balance || 0) + incomeAmount;
+      uplineUser.incomeWallet.totalEarnings = (uplineUser.incomeWallet.totalEarnings || 0) + incomeAmount;
       uplineUser.incomeWallet.lastUpdated = Date.now();
       
       // Add income transaction record
@@ -564,16 +820,31 @@ const processMatrixIncomeOnActivation = async (newUserId, currentReferrerId, lev
         uplineUser.incomeTransactions = [];
       }
       
+      // Get activated user info for transaction description
+      const activatedUser = await User.findById(newUserId);
+      const activatedUserInfo = activatedUser ? `${activatedUser.name} (${activatedUser.userId})` : `User ID: ${newUserId}`;
+      
       uplineUser.incomeTransactions.push({
         type: 'matrix_income',
         amount: incomeAmount,
         level: level,
         fromUser: newUserId,
         date: Date.now(),
-        description: `Matrix Level ${level} income from user activation`
+        description: `Matrix Level ${level} completion bonus - ${matrixCapacity[level]} members achieved (triggered by ${activatedUserInfo})`
       });
       
       await uplineUser.save();
+      
+      console.log(`✅ ₹${incomeAmount} matrix income (Level ${level}) processed for user: ${uplineUser.userId}`);
+      console.log(`   Previous matrixIncome: ₹${previousMatrixIncome} → New matrixIncome: ₹${uplineUser.incomeWallet.matrixIncome}`);
+      console.log(`   Previous balance: ₹${previousBalance} → New balance: ₹${uplineUser.incomeWallet.balance}`);
+      console.log(`   Previous totalEarnings: ₹${previousTotalEarnings} → New totalEarnings: ₹${uplineUser.incomeWallet.totalEarnings}`);
+    } else if (currentLevelCount < matrixCapacity[level]) {
+      const membersNeeded = matrixCapacity[level] - currentLevelCount;
+      console.log(`⏳ Matrix Level ${level}: User ${uplineUser.userId} has ${currentLevelCount}/${matrixCapacity[level]} members`);
+      console.log(`   Still needs ${membersNeeded} more activations for ₹${matrixIncomes[level]} bonus`);
+    } else if (alreadyReceivedThisLevel) {
+      console.log(`✅ Matrix Level ${level}: User ${uplineUser.userId} already received ₹${matrixIncomes[level]} bonus for this level`);
     }
     
     // Continue to next level if upline user has a referrer
@@ -583,6 +854,159 @@ const processMatrixIncomeOnActivation = async (newUserId, currentReferrerId, lev
     
   } catch (err) {
     console.error(`Error processing matrix income at level ${level}:`, err);
+  }
+};
+
+// Process rank rewards based on team size
+const processRankRewards = async (userId) => {
+  try {
+    console.log(`Processing rank rewards for user: ${userId}`);
+    
+    const user = await User.findById(userId);
+    if (!user || !user.isActive) {
+      console.log(`User ${userId} not found or not active, skipping rank rewards`);
+      return;
+    }
+    
+    // Count total active referrals (direct team members)
+    const activeReferrals = await User.countDocuments({
+      referrer: userId,
+      isActive: true
+    });
+    
+    console.log(`User ${user.userId} has ${activeReferrals} active referrals`);
+    
+    // Define rank structure with rewards
+    const rankStructure = [
+      { 
+        rank: 'BRONZE', 
+        members: 25, 
+        reward: 500, 
+        description: '₹500 + ID Card',
+        benefits: ['₹500 Cash Reward', 'Official ID Card']
+      },
+      { 
+        rank: 'SILVER', 
+        members: 50, 
+        reward: 1000, 
+        description: '₹1000 + Bag',
+        benefits: ['₹1000 Cash Reward', 'Premium Bag']
+      },
+      { 
+        rank: 'GOLD', 
+        members: 100, 
+        reward: 2500, 
+        description: '₹2500 + Mobile Phone',
+        benefits: ['₹2500 Cash Reward', 'Mobile Phone']
+      },
+      { 
+        rank: 'RUBY', 
+        members: 200, 
+        reward: 10000, 
+        description: '₹10000 + Mobile Phone + Tour',
+        benefits: ['₹10000 Cash Reward', 'Mobile Phone', 'Tour Package']
+      },
+      { 
+        rank: 'DIAMOND', 
+        members: 400, 
+        reward: 15000, 
+        description: '₹15K + India Tour',
+        benefits: ['₹15000 Cash Reward', 'India Tour Package']
+      },
+      { 
+        rank: 'PLATINUM', 
+        members: 800, 
+        reward: 25000, 
+        description: '₹25K + International Tour',
+        benefits: ['₹25000 Cash Reward', 'International Tour Package']
+      },
+      { 
+        rank: 'KING', 
+        members: 1600, 
+        reward: 60000, 
+        description: '₹60K + Bike + International Tour',
+        benefits: ['₹60000 Cash Reward', 'Bike', 'International Tour Package']
+      }
+    ];
+    
+    // Initialize income wallet if not exists
+    if (!user.incomeWallet) {
+      user.incomeWallet = {
+        balance: 0,
+        selfIncome: 0,
+        directIncome: 0,
+        matrixIncome: 0,
+        dailyIncome: 0,
+        dailyTeamIncome: 0,
+        rankRewards: 0,
+        fxTradingIncome: 0,
+        totalEarnings: 0,
+        withdrawnAmount: 0,
+        lastUpdated: Date.now()
+      };
+    }
+    
+    // Initialize income transactions if not exists
+    if (!user.incomeTransactions) {
+      user.incomeTransactions = [];
+    }
+    
+    // Check which ranks the user qualifies for and hasn't received yet
+    for (const rankData of rankStructure) {
+      if (activeReferrals >= rankData.members) {
+        // Check if user already received this rank reward
+        const alreadyReceived = user.incomeTransactions.some(transaction => 
+          transaction.type === 'rank_reward' && 
+          transaction.description && 
+          transaction.description.includes(rankData.rank)
+        );
+        
+        if (!alreadyReceived) {
+          console.log(`🏆 User ${user.userId} qualified for ${rankData.rank} rank! Awarding ₹${rankData.reward}`);
+          
+          // Store previous values for logging
+          const previousRankRewards = user.incomeWallet.rankRewards || 0;
+          const previousBalance = user.incomeWallet.balance || 0;
+          const previousTotalEarnings = user.incomeWallet.totalEarnings || 0;
+          
+          // Add rank reward
+          user.incomeWallet.rankRewards += rankData.reward;
+          user.incomeWallet.balance += rankData.reward;
+          user.incomeWallet.totalEarnings += rankData.reward;
+          user.incomeWallet.lastUpdated = Date.now();
+          
+          // Update user rank
+          user.rank = rankData.rank;
+          
+          // Add transaction record
+          user.incomeTransactions.push({
+            type: 'rank_reward',
+            amount: rankData.reward,
+            date: Date.now(),
+            description: `${rankData.rank} Rank Achievement - ${rankData.description} (${activeReferrals} active members)`
+          });
+          
+          await user.save();
+          
+          console.log(`✅ ₹${rankData.reward} rank reward (${rankData.rank}) processed for user: ${user.userId}`);
+          console.log(`   Previous rankRewards: ₹${previousRankRewards} → New rankRewards: ₹${user.incomeWallet.rankRewards}`);
+          console.log(`   Previous balance: ₹${previousBalance} → New balance: ₹${user.incomeWallet.balance}`);
+          console.log(`   Previous totalEarnings: ₹${previousTotalEarnings} → New totalEarnings: ₹${user.incomeWallet.totalEarnings}`);
+          console.log(`   Rank updated to: ${rankData.rank}`);
+          console.log(`   Benefits: ${rankData.benefits.join(', ')}`);
+        } else {
+          console.log(`✅ User ${user.userId} already received ${rankData.rank} rank reward`);
+        }
+      }
+    }
+    
+    // Continue processing for user's referrer if exists
+    if (user.referrer) {
+      await processRankRewards(user.referrer);
+    }
+    
+  } catch (err) {
+    console.error(`Error processing rank rewards for user ${userId}:`, err);
   }
 };
 

@@ -3,7 +3,26 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "nodemon ./bin/www"
+    "start": "nodemon ./bin/www",
+    "test-daily-income": "node test-daily-income.js run",
+    "force-daily-income": "node test-daily-income.js force",
+    "reset-daily-income": "node test-daily-income.js reset",
+    "daily-stats": "node test-daily-income.js stats",
+    "show-users": "node test-daily-income.js users",
+    "test-matrix-demo": "node test-matrix-income.js demo",
+    "test-matrix-table": "node test-matrix-income.js table",
+    "test-matrix-structure": "node test-matrix-scheduler.js structure",
+    "test-matrix-progress": "node test-matrix-scheduler.js progress",
+    "test-matrix-run": "node test-matrix-scheduler.js run",
+    "test-matrix-force": "node test-matrix-scheduler.js force",
+    "test-matrix-stats": "node test-matrix-scheduler.js stats",
+    "test-matrix-reset": "node test-matrix-scheduler.js reset",
+    "test-matrix-demo-setup": "node test-matrix-scheduler.js demo",
+    "test-rank-structure": "node test-rank-rewards.js structure",
+    "test-rank-progress": "node test-rank-rewards.js progress",
+    "test-rank-simulate": "node test-rank-rewards.js simulate",
+    "test-rank-stats": "node test-rank-rewards.js stats",
+    "test-rank-reset": "node test-rank-rewards.js reset"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

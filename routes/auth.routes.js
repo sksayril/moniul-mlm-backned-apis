@@ -8,6 +8,7 @@ router.post('/signup', authController.signup);
 router.post('/signin', authController.signin);
 router.get('/me', protect, authController.getMe);
 router.post('/updateMe', protect, authController.updateMe);
+router.get('/tpin-status', protect, authController.checkTPINStatus);
 router.post('/activate', protect, authController.activateAccount);
 
 // Account settings routes
