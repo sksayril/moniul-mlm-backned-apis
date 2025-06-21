@@ -304,7 +304,7 @@ const userSchema = new mongoose.Schema({
             }
         }]
     }],
-
+    
     // Income transaction history
     incomeTransactions: [{
         type: {

@@ -725,10 +725,31 @@ const addUserToUplineDownline = async (userId, uplineId, level) => {
     level
   });
   
-  // Add matrix income based on level
-  const matrixIncome = getMatrixIncomeForLevel(level);
-  upline.incomeWallet.matrixIncome += matrixIncome;
-  upline.incomeWallet.balance += matrixIncome;
+  // Calculate current count for this level
+  const currentLevelCount = upline.downline.filter(item => item.level === level).length;
+  
+  // Calculate matrix income based on completed cycles
+  const newMatrixIncome = calculateMatrixIncome(currentLevelCount, level);
+  const previousMatrixIncome = calculateMatrixIncome(currentLevelCount - 1, level);
+  const incomeToAdd = newMatrixIncome - previousMatrixIncome;
+  
+  // Only add income if a new cycle is completed
+  if (incomeToAdd > 0) {
+    upline.incomeWallet.matrixIncome += incomeToAdd;
+    upline.incomeWallet.balance += incomeToAdd;
+    
+    // Add income transaction record
+    upline.incomeTransactions.push({
+      type: 'matrix_income',
+      amount: incomeToAdd,
+      level: level,
+      fromUser: userId,
+      date: Date.now(),
+      description: `Matrix Level ${level} cycle completed - ${currentLevelCount} users`
+    });
+    
+    console.log(`Matrix income of ₹${incomeToAdd} added to user ${upline._id} for Level ${level} completion (${currentLevelCount} users)`);
+  }
   
   await upline.save();
   
@@ -748,12 +769,33 @@ const addUserToReferrersDownline = async (userId, referrerId, level = 1) => {
   // Add to downline with level information
   referrer.downline.push({ user: userId, level });
   
-  // Add matrix income for the level
-  const matrixIncomeForLevel = getMatrixIncomeForLevel(level);
-  referrer.incomeWallet.matrixIncome += matrixIncomeForLevel;
-  referrer.incomeWallet.balance += matrixIncomeForLevel;
-  referrer.incomeWallet.lastUpdated = Date.now();
+  // Calculate current count for this level
+  const currentLevelCount = referrer.downline.filter(item => item.level === level).length;
   
+  // Calculate matrix income based on completed cycles
+  const newMatrixIncome = calculateMatrixIncome(currentLevelCount, level);
+  const previousMatrixIncome = calculateMatrixIncome(currentLevelCount - 1, level);
+  const incomeToAdd = newMatrixIncome - previousMatrixIncome;
+  
+  // Only add income if a new cycle is completed
+  if (incomeToAdd > 0) {
+    referrer.incomeWallet.matrixIncome += incomeToAdd;
+    referrer.incomeWallet.balance += incomeToAdd;
+    
+    // Add income transaction record
+    referrer.incomeTransactions.push({
+      type: 'matrix_income',
+      amount: incomeToAdd,
+      level: level,
+      fromUser: userId,
+      date: Date.now(),
+      description: `Matrix Level ${level} cycle completed - ${currentLevelCount} users`
+    });
+    
+    console.log(`Matrix income of ₹${incomeToAdd} added to referrer ${referrer._id} for Level ${level} completion (${currentLevelCount} users)`);
+  }
+  
+  referrer.incomeWallet.lastUpdated = Date.now();
   await referrer.save();
   
   // Recurse up the referrer tree (if referrer has a referrer)
@@ -793,19 +835,31 @@ exports.processMatrixIncomeOnTpinActivation = async (userId) => {
   }
 };
 
-// Get matrix income for each level
-const getMatrixIncomeForLevel = (level) => {
-  const incomeByLevel = {
-    1: 20,  // Level 1: ₹20
-    2: 10,  // Level 2: ₹10
-    3: 5,   // Level 3: ₹5
-    4: 3,   // Level 4: ₹3
-    5: 2,   // Level 5: ₹2
-    6: 1,   // Level 6: ₹1
-    7: 1    // Level 7: ₹1
+// Get matrix capacity and income for each level
+const getMatrixInfo = () => {
+  return {
+    1: { capacity: 5, totalIncome: 50 },      // 5 users = ₹50
+    2: { capacity: 25, totalIncome: 250 },    // 25 users = ₹250 (₹10 per user)
+    3: { capacity: 125, totalIncome: 625 },   // 125 users = ₹625 (₹5 per user)
+    4: { capacity: 625, totalIncome: 1875 },  // 625 users = ₹1875 (₹3 per user)
+    5: { capacity: 3125, totalIncome: 6250 }, // 3125 users = ₹6250 (₹2 per user)
+    6: { capacity: 15625, totalIncome: 15625 }, // 15625 users = ₹15625 (₹1 per user)
+    7: { capacity: 78125, totalIncome: 78125 }  // 78125 users = ₹78125 (₹1 per user)
   };
+};
+
+// Calculate matrix income based on completed cycles
+const calculateMatrixIncome = (currentCount, level) => {
+  const matrixInfo = getMatrixInfo();
+  const levelInfo = matrixInfo[level];
   
-  return incomeByLevel[level] || 0;
+  if (!levelInfo) return 0;
+  
+  // Calculate how many complete cycles are achieved
+  const completedCycles = Math.floor(currentCount / levelInfo.capacity);
+  
+  // Return income for completed cycles only
+  return completedCycles * levelInfo.totalIncome;
 };
 
 // Get user's referral link
@@ -960,25 +1014,23 @@ exports.getMatrixStructure = async (req, res) => {
     }
     
     // Matrix capacity and income for each level
-    const matrixInfo = {
-      1: { capacity: 5, income: 50 },
-      2: { capacity: 25, income: 125 },
-      3: { capacity: 125, income: 625 },
-      4: { capacity: 625, income: 1875 },
-      5: { capacity: 3125, income: 9375 },
-      6: { capacity: 15625, income: 46875 },
-      7: { capacity: 78125, income: 234375 }
-    };
+    const matrixInfo = getMatrixInfo();
     
     // Organize downline by levels
     const matrixStructure = {};
     for (let level = 1; level <= 7; level++) {
       const levelMembers = user.downline.filter(member => member.level === level);
+      const completedCycles = Math.floor(levelMembers.length / matrixInfo[level].capacity);
+      const earnedIncome = completedCycles * matrixInfo[level].totalIncome;
+      
       matrixStructure[level] = {
         capacity: matrixInfo[level].capacity,
         currentCount: levelMembers.length,
-        incomePerMember: matrixInfo[level].income,
-        totalPotentialIncome: matrixInfo[level].income * matrixInfo[level].capacity,
+        completedCycles: completedCycles,
+        incomePerCycle: matrixInfo[level].totalIncome,
+        earnedIncome: earnedIncome,
+        nextCycleProgress: levelMembers.length % matrixInfo[level].capacity,
+        nextCycleNeeded: matrixInfo[level].capacity - (levelMembers.length % matrixInfo[level].capacity),
         members: levelMembers.map(member => ({
           userId: member.userId._id,
           name: member.userId.name,
@@ -1036,6 +1088,75 @@ exports.getMatrixStructure = async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Error fetching matrix structure',
+      error: err.message
+    });
+  }
+};
+
+// Get matrix income status and cycles for debugging
+exports.getMatrixIncomeStatus = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    const matrixInfo = getMatrixInfo();
+    const matrixStatus = {};
+    
+    // Calculate status for each level
+    for (let level = 1; level <= 7; level++) {
+      const levelMembers = user.downline.filter(member => member.level === level);
+      const currentCount = levelMembers.length;
+      const capacity = matrixInfo[level].capacity;
+      const completedCycles = Math.floor(currentCount / capacity);
+      const earnedIncome = calculateMatrixIncome(currentCount, level);
+      const progressInCurrentCycle = currentCount % capacity;
+      const neededForNextCycle = capacity - progressInCurrentCycle;
+      
+      matrixStatus[level] = {
+        capacity,
+        currentCount,
+        completedCycles,
+        earnedIncome,
+        incomePerCycle: matrixInfo[level].totalIncome,
+        progressInCurrentCycle,
+        neededForNextCycle: neededForNextCycle === capacity ? 0 : neededForNextCycle,
+        completionPercentage: ((progressInCurrentCycle / capacity) * 100).toFixed(2)
+      };
+    }
+    
+    // Calculate total matrix income earned
+    const totalMatrixIncome = user.incomeWallet.matrixIncome || 0;
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        userInfo: {
+          name: user.name,
+          userId: user.userId,
+          isActive: user.isActive
+        },
+        totalMatrixIncome,
+        currentBalance: user.incomeWallet.balance,
+        matrixStatus,
+        summary: {
+          totalDownlineMembers: user.downline.length,
+          totalCompletedCycles: Object.values(matrixStatus).reduce((sum, level) => sum + level.completedCycles, 0),
+          potentialNextIncome: Math.min(...Object.values(matrixStatus).map(level => 
+            level.neededForNextCycle === 0 ? Infinity : level.incomePerCycle
+          ))
+        }
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching matrix income status',
       error: err.message
     });
   }
