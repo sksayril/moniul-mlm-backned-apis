@@ -33,6 +33,7 @@ router.get('/withdrawal/rejected/list', mlmController.getRejectedWithdrawals);
 
 // Matrix structure and income routes
 router.get('/matrix/structure', mlmController.getMatrixStructure);
+router.get('/matrix/income-status', mlmController.getMatrixIncomeStatus);
 router.get('/income/breakdown', mlmController.getIncomeBreakdown);
 
 module.exports = router;

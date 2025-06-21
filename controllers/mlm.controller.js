@@ -839,7 +839,7 @@ exports.processMatrixIncomeOnTpinActivation = async (userId) => {
 const getMatrixInfo = () => {
   return {
     1: { capacity: 5, totalIncome: 50 },      // 5 users = ₹50
-    2: { capacity: 25, totalIncome: 250 },    // 25 users = ₹250 (₹10 per user)
+    2: { capacity: 25, totalIncome: 125 },    // 25 users = ₹125 (₹5 per user as user requested)
     3: { capacity: 125, totalIncome: 625 },   // 125 users = ₹625 (₹5 per user)
     4: { capacity: 625, totalIncome: 1875 },  // 625 users = ₹1875 (₹3 per user)
     5: { capacity: 3125, totalIncome: 6250 }, // 3125 users = ₹6250 (₹2 per user)

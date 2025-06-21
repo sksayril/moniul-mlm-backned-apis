@@ -307,7 +307,7 @@ exports.getDashboardStats = async (req, res) => {
         uniqueUplineUsers: levelStat.uniqueUplineUsersCount,
         capacity: capacity,
         completionRate: Math.min(completion, 100), // Cap at 100%
-        potentialIncome: capacity * getMatrixIncomeForLevel(level)
+        potentialIncome: capacity * getMatrixIncomePerUser(level)
       };
     });
     
@@ -569,16 +569,16 @@ function getWithdrawalStatsByStatus(withdrawalStats, status) {
   };
 }
 
-// Helper function to get matrix income for a specific level
-function getMatrixIncomeForLevel(level) {
-  const matrixIncomes = {
-    1: 50,
-    2: 125,
-    3: 625,
-    4: 1875,
-    5: 9375,
-    6: 46875,
-    7: 234375
+// Helper function to get matrix income for a specific level (per user rate)
+function getMatrixIncomePerUser(level) {
+  const incomePerUser = {
+    1: 10,  // ₹50 / 5 users = ₹10 per user
+    2: 5,   // ₹125 / 25 users = ₹5 per user  
+    3: 5,   // ₹625 / 125 users = ₹5 per user
+    4: 3,   // ₹1875 / 625 users = ₹3 per user
+    5: 2,   // ₹6250 / 3125 users = ₹2 per user
+    6: 1,   // ₹15625 / 15625 users = ₹1 per user
+    7: 1    // ₹78125 / 78125 users = ₹1 per user
   };
-  return matrixIncomes[level] || 0;
+  return incomePerUser[level] || 0;
 }
