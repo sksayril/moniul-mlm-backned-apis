@@ -22,6 +22,8 @@ const adminTpinRouter = require('./routes/admin.tpin.routes');
 const cryptoRouter = require('./routes/crypto.routes');
 const adminCryptoRouter = require('./routes/admin.crypto.routes');
 const adminBlockRouter = require('./routes/admin.block.routes');
+const matrixRouter = require('./routes/matrix.routes');
+const dailyIncomeRouter = require('./routes/daily.income.routes');
 
 const app = express();
 
@@ -74,9 +76,19 @@ app.use('/api/admin/crypto', adminCryptoRouter);
 // Admin block/unblock routes
 app.use('/api/admin/block', adminBlockRouter);
 
+// Matrix income routes
+app.use('/api/matrix', matrixRouter);
+
+// Daily income routes (admin only)
+app.use('/api/admin/daily-income', dailyIncomeRouter);
+
 // Start investment scheduler
 const investmentScheduler = require('./services/investment.scheduler');
 investmentScheduler.startInvestmentScheduler();
+
+// Start daily income scheduler
+const dailyIncomeScheduler = require('./services/daily.income.scheduler');
+dailyIncomeScheduler.startDailyIncomeScheduler();
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -167,6 +167,10 @@ const userSchema = new mongoose.Schema({
             type: Number,
             default: 0
         },
+        dailyIncome: {
+            type: Number,
+            default: 0
+        },
         dailyTeamIncome: {
             type: Number,
             default: 0
@@ -186,6 +190,9 @@ const userSchema = new mongoose.Schema({
         withdrawnAmount: {
             type: Number,
             default: 0
+        },
+        lastDailyIncome: {
+            type: Date
         },
         lastUpdated: {
             type: Date,
@@ -263,11 +270,46 @@ const userSchema = new mongoose.Schema({
         }
     }],
     
+    // Matrix level tracking
+    matrixLevels: [{
+        level: {
+            type: Number,
+            required: true
+        },
+        membersCount: {
+            type: Number,
+            default: 0
+        },
+        requiredMembers: {
+            type: Number,
+            required: true
+        },
+        rewardAmount: {
+            type: Number,
+            required: true
+        },
+        isCompleted: {
+            type: Boolean,
+            default: false
+        },
+        completedAt: Date,
+        members: [{
+            userId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User'
+            },
+            addedAt: {
+                type: Date,
+                default: Date.now
+            }
+        }]
+    }],
+
     // Income transaction history
     incomeTransactions: [{
         type: {
             type: String,
-            enum: ['self_income', 'direct_income', 'matrix_income', 'rank_reward', 'fx_trading', 'withdrawal', 'investment_return', 'investment_maturity'],
+            enum: ['self_income', 'direct_income', 'matrix_income', 'daily_income', 'rank_reward', 'fx_trading', 'withdrawal', 'investment_return', 'investment_maturity'],
             required: true
         },
         amount: {

@@ -186,13 +186,90 @@ exports.signin = async (req, res) => {
 // Get current user profile
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id)
+      .populate('referrer', 'name userId email')
+      .populate('matrixLevels.members.userId', 'name userId email')
+      .select('-password -__v');
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+
+    // Initialize matrix levels if not exists
+    const { initializeMatrixLevels } = require('./matrix.controller');
+    await initializeMatrixLevels(user._id);
+    
+    // Reload user with matrix levels
+    const updatedUser = await User.findById(req.user.id)
+      .populate('referrer', 'name userId email')
+      .populate('matrixLevels.members.userId', 'name userId email')
+      .select('-password -__v');
+
+    // Calculate daily income statistics
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const dailyIncomeStats = {
+      totalDailyIncome: updatedUser.incomeWallet?.dailyIncome || 0,
+      lastDailyIncome: updatedUser.incomeWallet?.lastDailyIncome || null,
+      receivedToday: updatedUser.incomeWallet?.lastDailyIncome && 
+                    new Date(updatedUser.incomeWallet.lastDailyIncome) >= today,
+      dailyIncomeAmount: 5
+    };
+
+    // Calculate matrix level statistics
+    const matrixStats = {
+      totalMatrixIncome: updatedUser.incomeWallet?.matrixIncome || 0,
+      matrixLevels: updatedUser.matrixLevels?.map(level => ({
+        level: level.level,
+        membersCount: level.membersCount,
+        requiredMembers: level.requiredMembers,
+        rewardAmount: level.rewardAmount,
+        isCompleted: level.isCompleted,
+        completedAt: level.completedAt,
+        progress: `${level.membersCount}/${level.requiredMembers}`,
+        progressPercentage: ((level.membersCount / level.requiredMembers) * 100).toFixed(1),
+        nextReward: level.isCompleted ? 0 : level.rewardAmount,
+        membersNeeded: level.isCompleted ? 0 : (level.requiredMembers - level.membersCount)
+      })) || []
+    };
+
+    // Get recent income transactions (last 10)
+    const recentTransactions = updatedUser.incomeTransactions
+      ?.filter(transaction => ['daily_income', 'matrix_income'].includes(transaction.type))
+      ?.sort((a, b) => new Date(b.date) - new Date(a.date))
+      ?.slice(0, 10) || [];
+
+    // Calculate total income breakdown
+    const incomeBreakdown = {
+      selfIncome: updatedUser.incomeWallet?.selfIncome || 0,
+      directIncome: updatedUser.incomeWallet?.directIncome || 0,
+      matrixIncome: updatedUser.incomeWallet?.matrixIncome || 0,
+      dailyIncome: updatedUser.incomeWallet?.dailyIncome || 0,
+      dailyTeamIncome: updatedUser.incomeWallet?.dailyTeamIncome || 0,
+      rankRewards: updatedUser.incomeWallet?.rankRewards || 0,
+      fxTradingIncome: updatedUser.incomeWallet?.fxTradingIncome || 0,
+      totalBalance: updatedUser.incomeWallet?.balance || 0,
+      totalEarnings: updatedUser.incomeWallet?.totalEarnings || 0,
+      withdrawnAmount: updatedUser.incomeWallet?.withdrawnAmount || 0
+    };
     
     res.status(200).json({
       status: 'success',
-      data: { user }
+      message: 'User profile retrieved successfully',
+      data: { 
+        user: updatedUser,
+        dailyIncomeStats,
+        matrixStats,
+        incomeBreakdown,
+        recentTransactions
+      }
     });
   } catch (err) {
+    console.error('Error fetching user profile:', err);
     res.status(500).json({
       status: 'error',
       message: 'Error fetching user profile',
@@ -341,6 +418,10 @@ exports.activateAccount = async (req, res) => {
     // Process MLM income if user has a referrer
     if (user.referrer) {
       await processMLMIncomeOnActivation(user._id, user.referrer);
+      
+      // Process new matrix income system
+      const { processMatrixIncome } = require('./matrix.controller');
+      await processMatrixIncome(user._id, user.referrer);
     }
     
     res.status(200).json({
