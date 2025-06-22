@@ -496,7 +496,6 @@ exports.activateAccount = async (req, res) => {
     // Add ₹10 instant activation bonus for first-time TPIN activation
     const ACTIVATION_BONUS = 10;
     user.incomeWallet.selfIncome += ACTIVATION_BONUS;
-    user.incomeWallet.dailyIncome += ACTIVATION_BONUS; // Also add to daily income
     user.incomeWallet.balance += ACTIVATION_BONUS;
     user.incomeWallet.totalEarnings += ACTIVATION_BONUS;
     user.incomeWallet.lastDailyIncome = Date.now(); // Mark as received daily income
@@ -583,7 +582,7 @@ exports.activateAccount = async (req, res) => {
           description: 'First-time account activation reward (added to both self-income and daily income)'
         },
         incomeWallet: {
-          currentBalance: user.incomeWallet.balance,
+        currentBalance: user.incomeWallet.balance,
           selfIncome: user.incomeWallet.selfIncome,
           dailyIncome: user.incomeWallet.dailyIncome,
           totalEarnings: user.incomeWallet.totalEarnings
@@ -656,22 +655,22 @@ const processMLMIncomeOnActivation = async (userId, referrerId) => {
     console.log(`Adding ₹50 direct income to referrer: ${directReferrer.name} (${directReferrer.userId})`);
     
     // Initialize income wallet if not exists
-    if (!directReferrer.incomeWallet) {
-      directReferrer.incomeWallet = {
-        balance: 0,
-        selfIncome: 0,
-        directIncome: 0,
-        matrixIncome: 0,
+      if (!directReferrer.incomeWallet) {
+        directReferrer.incomeWallet = {
+          balance: 0,
+          selfIncome: 0,
+          directIncome: 0,
+          matrixIncome: 0,
         dailyIncome: 0,
         dailyTeamIncome: 0,
-        rankRewards: 0,
+          rankRewards: 0,
         fxTradingIncome: 0,
-        totalEarnings: 0,
-        withdrawnAmount: 0,
-        lastUpdated: Date.now()
-      };
-    }
-    
+          totalEarnings: 0,
+          withdrawnAmount: 0,
+          lastUpdated: Date.now()
+        };
+      }
+      
     // Store previous values for logging
     const previousDirectIncome = directReferrer.incomeWallet.directIncome || 0;
     const previousBalance = directReferrer.incomeWallet.balance || 0;
@@ -682,6 +681,12 @@ const processMLMIncomeOnActivation = async (userId, referrerId) => {
     directReferrer.incomeWallet.directIncome = (directReferrer.incomeWallet.directIncome || 0) + DIRECT_REFERRAL_BONUS;
     directReferrer.incomeWallet.balance = (directReferrer.incomeWallet.balance || 0) + DIRECT_REFERRAL_BONUS;
     directReferrer.incomeWallet.totalEarnings = (directReferrer.incomeWallet.totalEarnings || 0) + DIRECT_REFERRAL_BONUS;
+    
+    // Add ₹5 instant referral bonus to DailyIncome wallet
+    const INSTANT_REFERRAL_BONUS = 5;
+    directReferrer.incomeWallet.dailyIncome = (directReferrer.incomeWallet.dailyIncome || 0) + INSTANT_REFERRAL_BONUS;
+    directReferrer.incomeWallet.balance = (directReferrer.incomeWallet.balance || 0) + INSTANT_REFERRAL_BONUS;
+    directReferrer.incomeWallet.totalEarnings = (directReferrer.incomeWallet.totalEarnings || 0) + INSTANT_REFERRAL_BONUS;
     directReferrer.incomeWallet.lastUpdated = Date.now();
     
     // Add transaction record for direct referral income
@@ -701,15 +706,28 @@ const processMLMIncomeOnActivation = async (userId, referrerId) => {
       description: `Direct referral income from ${activatedUserInfo} account activation`
     });
     
+    // Add separate transaction for instant referral bonus
+    directReferrer.incomeTransactions.push({
+      type: 'daily_income',
+      amount: INSTANT_REFERRAL_BONUS,
+      fromUser: userId,
+      date: Date.now(),
+      description: `Instant referral bonus from ${activatedUserInfo} account activation (added to selfIncome)`
+    });
+    
     await directReferrer.save();
     
-    console.log(`✅ ₹${DIRECT_REFERRAL_BONUS} direct income processed for referrer: ${directReferrer.userId}`);
+    console.log(`✅ ₹${DIRECT_REFERRAL_BONUS} direct income + ₹${INSTANT_REFERRAL_BONUS} instant bonus processed for referrer: ${directReferrer.userId}`);
     console.log(`   Previous directIncome: ₹${previousDirectIncome} → New directIncome: ₹${directReferrer.incomeWallet.directIncome}`);
+    console.log(`   Previous selfIncome: ₹${directReferrer.incomeWallet.dailyIncome - INSTANT_REFERRAL_BONUS} → New selfIncome: ₹${directReferrer.incomeWallet.dailyIncome}`);
     console.log(`   Previous balance: ₹${previousBalance} → New balance: ₹${directReferrer.incomeWallet.balance}`);
     console.log(`   Previous totalEarnings: ₹${previousTotalEarnings} → New totalEarnings: ₹${directReferrer.incomeWallet.totalEarnings}`);
     
     // Process matrix income for up to 7 levels
     await processMatrixIncomeOnActivation(userId, referrerId);
+    
+    // Process daily team income for up to 7 levels
+    await processDailyTeamIncomeOnActivation(userId, referrerId);
     
   } catch (err) {
     console.error('Error processing MLM income:', err);
@@ -854,6 +872,96 @@ const processMatrixIncomeOnActivation = async (newUserId, currentReferrerId, lev
     
   } catch (err) {
     console.error(`Error processing matrix income at level ${level}:`, err);
+  }
+};
+
+// Process daily team income distribution (7 levels)
+const processDailyTeamIncomeOnActivation = async (newUserId, currentReferrerId, level = 1) => {
+  try {
+    if (level > 7 || !currentReferrerId) return;
+    
+    const uplineUser = await User.findById(currentReferrerId);
+    if (!uplineUser || !uplineUser.isActive) {
+      // If upline user is not active, pass income to next level
+      if (uplineUser && uplineUser.referrer) {
+        await processDailyTeamIncomeOnActivation(newUserId, uplineUser.referrer, level + 1);
+      }
+      return;
+    }
+    
+    // Daily team income amounts for each level (based on provided image)
+    const dailyTeamIncomes = {
+      1: 5,  // ₹5 for level 1
+      2: 4,  // ₹4 for level 2
+      3: 3,  // ₹3 for level 3
+      4: 2,  // ₹2 for level 4
+      5: 2,  // ₹2 for level 5
+      6: 2,  // ₹2 for level 6
+      7: 2   // ₹2 for level 7
+    };
+    
+    console.log(`Processing Daily Team Income Level ${level} for user: ${uplineUser.userId}`);
+    
+    // Initialize income wallet if not exists
+    if (!uplineUser.incomeWallet) {
+      uplineUser.incomeWallet = {
+        balance: 0,
+        selfIncome: 0,
+        directIncome: 0,
+        matrixIncome: 0,
+        dailyIncome: 0,
+        dailyTeamIncome: 0,
+        rankRewards: 0,
+        fxTradingIncome: 0,
+        totalEarnings: 0,
+        withdrawnAmount: 0,
+        lastUpdated: Date.now()
+      };
+    }
+    
+    // Store previous values for logging
+    const previousDailyTeamIncome = uplineUser.incomeWallet.dailyTeamIncome || 0;
+    const previousBalance = uplineUser.incomeWallet.balance || 0;
+    const previousTotalEarnings = uplineUser.incomeWallet.totalEarnings || 0;
+    
+    const incomeAmount = dailyTeamIncomes[level];
+    uplineUser.incomeWallet.dailyTeamIncome = (uplineUser.incomeWallet.dailyTeamIncome || 0) + incomeAmount;
+    uplineUser.incomeWallet.balance = (uplineUser.incomeWallet.balance || 0) + incomeAmount;
+    uplineUser.incomeWallet.totalEarnings = (uplineUser.incomeWallet.totalEarnings || 0) + incomeAmount;
+    uplineUser.incomeWallet.lastUpdated = Date.now();
+    
+    // Add income transaction record
+    if (!uplineUser.incomeTransactions) {
+      uplineUser.incomeTransactions = [];
+    }
+    
+    // Get activated user info for transaction description
+    const activatedUser = await User.findById(newUserId);
+    const activatedUserInfo = activatedUser ? `${activatedUser.name} (${activatedUser.userId})` : `User ID: ${newUserId}`;
+    
+    uplineUser.incomeTransactions.push({
+      type: 'daily_team_income', // Using the proper enum value we added to the schema
+      amount: incomeAmount,
+      level: level,
+      fromUser: newUserId,
+      date: Date.now(),
+      description: `Daily Team Income Level ${level} - ₹${incomeAmount} from ${activatedUserInfo} activation`
+    });
+    
+    await uplineUser.save();
+    
+    console.log(`✅ ₹${incomeAmount} daily team income (Level ${level}) processed for user: ${uplineUser.userId}`);
+    console.log(`   Previous dailyTeamIncome: ₹${previousDailyTeamIncome} → New dailyTeamIncome: ₹${uplineUser.incomeWallet.dailyTeamIncome}`);
+    console.log(`   Previous balance: ₹${previousBalance} → New balance: ₹${uplineUser.incomeWallet.balance}`);
+    console.log(`   Previous totalEarnings: ₹${previousTotalEarnings} → New totalEarnings: ₹${uplineUser.incomeWallet.totalEarnings}`);
+    
+    // Continue to next level if upline user has a referrer
+    if (uplineUser.referrer) {
+      await processDailyTeamIncomeOnActivation(newUserId, uplineUser.referrer, level + 1);
+    }
+    
+  } catch (err) {
+    console.error(`Error processing daily team income at level ${level}:`, err);
   }
 };
 

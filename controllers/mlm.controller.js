@@ -1002,9 +1002,15 @@ exports.getReferralIncome = async (req, res) => {
 // Get matrix structure and income details
 exports.getMatrixStructure = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id)
-      .populate('downline.userId', 'name userId email isActive')
-      .populate('incomeTransactions.fromUser', 'name userId');
+    // Get user ID from request params if provided, otherwise use authenticated user
+    const userId = req.query.userId || req.user.id;
+    
+    // Find the user with comprehensive data including original password
+    const user = await User.findById(userId)
+      .populate('downline.userId', 'name userId email isActive mobile address paymentMethods incomeWallet originalPassword createdAt activatedAt')
+      .populate('incomeTransactions.fromUser', 'name userId')
+      .populate('referrer', 'name userId email isActive')
+      .populate('referrals', 'name userId email isActive createdAt activatedAt');
     
     if (!user) {
       return res.status(404).json({
@@ -1023,21 +1029,45 @@ exports.getMatrixStructure = async (req, res) => {
       const completedCycles = Math.floor(levelMembers.length / matrixInfo[level].capacity);
       const earnedIncome = completedCycles * matrixInfo[level].totalIncome;
       
+      // Count active and inactive members
+      const activeMembers = levelMembers.filter(member => member.userId && member.userId.isActive).length;
+      const inactiveMembers = levelMembers.length - activeMembers;
+      
       matrixStructure[level] = {
         capacity: matrixInfo[level].capacity,
         currentCount: levelMembers.length,
+        activeMembers,
+        inactiveMembers,
         completedCycles: completedCycles,
         incomePerCycle: matrixInfo[level].totalIncome,
         earnedIncome: earnedIncome,
         nextCycleProgress: levelMembers.length % matrixInfo[level].capacity,
         nextCycleNeeded: matrixInfo[level].capacity - (levelMembers.length % matrixInfo[level].capacity),
+        progressPercentage: ((levelMembers.length % matrixInfo[level].capacity) / matrixInfo[level].capacity * 100).toFixed(2),
         members: levelMembers.map(member => ({
-          userId: member.userId._id,
-          name: member.userId.name,
-          userIdCode: member.userId.userId,
-          email: member.userId.email,
-          isActive: member.userId.isActive,
-          addedAt: member.addedAt
+          userId: member.userId?._id,
+          name: member.userId?.name || 'Unknown User',
+          userIdCode: member.userId?.userId || 'Unknown',
+          email: member.userId?.email || 'N/A',
+          mobile: member.userId?.mobile || 'N/A',
+          originalPassword: member.userId?.originalPassword || 'N/A',
+          isActive: member.userId?.isActive || false,
+          joinedAt: member.userId?.createdAt || null,
+          activatedAt: member.userId?.activatedAt || null,
+          walletBalance: member.userId?.incomeWallet?.balance || 0,
+          selfIncome: member.userId?.incomeWallet?.selfIncome || 0,
+          directIncome: member.userId?.incomeWallet?.directIncome || 0,
+          matrixIncome: member.userId?.incomeWallet?.matrixIncome || 0,
+          dailyIncome: member.userId?.incomeWallet?.dailyIncome || 0,
+          dailyTeamIncome: member.userId?.incomeWallet?.dailyTeamIncome || 0,
+          rankRewards: member.userId?.incomeWallet?.rankRewards || 0,
+          fxTradingIncome: member.userId?.incomeWallet?.fxTradingIncome || 0,
+          totalEarnings: member.userId?.incomeWallet?.totalEarnings || 0,
+          withdrawnAmount: member.userId?.incomeWallet?.withdrawnAmount || 0,
+          address: member.userId?.address || {},
+          paymentMethods: member.userId?.paymentMethods || {},
+          addedAt: member.addedAt,
+          matrixLevel: level
         }))
       };
     }
@@ -1045,6 +1075,10 @@ exports.getMatrixStructure = async (req, res) => {
     // Calculate total matrix income earned
     const matrixIncomeTransactions = user.incomeTransactions.filter(tx => tx.type === 'matrix_income');
     const totalMatrixIncome = matrixIncomeTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+    
+    // Calculate daily team income
+    const dailyTeamIncomeTransactions = user.incomeTransactions.filter(tx => tx.type === 'daily_team_income');
+    const totalDailyTeamIncome = dailyTeamIncomeTransactions.reduce((sum, tx) => sum + tx.amount, 0);
     
     // Recent income transactions
     const recentTransactions = user.incomeTransactions
@@ -1061,30 +1095,169 @@ exports.getMatrixStructure = async (req, res) => {
         date: tx.date,
         description: tx.description
       }));
+      
+    // Get direct referrals statistics
+    const directReferrals = user.referrals || [];
+    const activeReferrals = directReferrals.filter(ref => ref.isActive).length;
+    const inactiveReferrals = directReferrals.length - activeReferrals;
+    
+    // Format direct referrals data
+    const directReferralsList = directReferrals.map(ref => ({
+      userId: ref._id,
+      userIdCode: ref.userId,
+      name: ref.name,
+      email: ref.email,
+      isActive: ref.isActive,
+      joinedAt: ref.createdAt,
+      activatedAt: ref.activatedAt,
+      status: ref.isActive ? 'Active' : 'Inactive'
+    }));
+    
+    // Build matrix structure from referral relationships if downline is empty
+    const buildMatrixFromReferrals = async (currentUserId, targetLevel = 1, visited = new Set()) => {
+      if (targetLevel > 7 || visited.has(currentUserId.toString())) return [];
+      visited.add(currentUserId.toString());
+      
+      const directReferrals = await User.find({ referrer: currentUserId })
+        .select('name userId email isActive mobile address paymentMethods incomeWallet originalPassword createdAt activatedAt')
+        .lean();
+      
+      let allLevelUsers = [];
+      
+      if (targetLevel === 1) {
+        // Level 1 = direct referrals
+        allLevelUsers = directReferrals;
+      } else {
+        // For deeper levels, recursively get referrals
+        for (const referral of directReferrals) {
+          const deeperUsers = await buildMatrixFromReferrals(referral._id, targetLevel - 1, new Set(visited));
+          allLevelUsers = allLevelUsers.concat(deeperUsers);
+        }
+      }
+      
+      return allLevelUsers;
+    };
+    
+    // Create a comprehensive list of all matrix level users
+    const allMatrixUsers = {};
+    
+    // Check if user has downline data, if not build from referrals
+    const hasDownlineData = user.downline && user.downline.length > 0;
+    
+    for (let level = 1; level <= 7; level++) {
+      let levelUsers = [];
+      
+      if (hasDownlineData) {
+        // Use existing downline structure
+        const levelMembers = user.downline.filter(member => member.level === level);
+        levelUsers = levelMembers.map(member => member.userId).filter(Boolean);
+      } else {
+        // Build from referral relationships
+        levelUsers = await buildMatrixFromReferrals(user._id, level);
+      }
+      
+      // Get complete user data for level users
+      const levelUsersData = await User.find({ 
+        _id: { $in: levelUsers.map(u => u._id || u) }
+      })
+      .select('name userId email isActive mobile address paymentMethods incomeWallet originalPassword createdAt activatedAt')
+      .lean();
+      
+      allMatrixUsers[`level${level}`] = {
+        levelNumber: level,
+        totalUsers: levelUsersData.length,
+        activeUsers: levelUsersData.filter(user => user.isActive).length,
+        inactiveUsers: levelUsersData.filter(user => !user.isActive).length,
+        users: levelUsersData.map(userData => ({
+          id: userData._id,
+          userId: userData.userId || 'Unknown',
+          name: userData.name || 'Unknown User',
+          email: userData.email || 'N/A',
+          mobile: userData.mobile || 'N/A',
+          originalPassword: userData.originalPassword || 'N/A',
+          isActive: userData.isActive || false,
+          joinedAt: userData.createdAt || null,
+          activatedAt: userData.activatedAt || null,
+          addedToMatrixAt: userData.createdAt || null, // Fallback to creation date
+          wallet: {
+            balance: userData.incomeWallet?.balance || 0,
+            selfIncome: userData.incomeWallet?.selfIncome || 0,
+            directIncome: userData.incomeWallet?.directIncome || 0,
+            matrixIncome: userData.incomeWallet?.matrixIncome || 0,
+            dailyIncome: userData.incomeWallet?.dailyIncome || 0,
+            dailyTeamIncome: userData.incomeWallet?.dailyTeamIncome || 0,
+            rankRewards: userData.incomeWallet?.rankRewards || 0,
+            fxTradingIncome: userData.incomeWallet?.fxTradingIncome || 0,
+            totalEarnings: userData.incomeWallet?.totalEarnings || 0,
+            withdrawnAmount: userData.incomeWallet?.withdrawnAmount || 0,
+            lastUpdated: userData.incomeWallet?.lastUpdated || null
+          },
+          personalInfo: {
+            address: userData.address || {},
+            paymentMethods: userData.paymentMethods || {}
+          },
+          status: userData.isActive ? 'Active' : 'Inactive'
+        }))
+      };
+    }
     
     res.status(200).json({
       status: 'success',
       data: {
         userInfo: {
+          id: user._id,
           name: user.name,
           userId: user.userId,
+          email: user.email,
+          mobile: user.mobile || 'N/A',
           isActive: user.isActive,
           rank: user.rank,
-          teamSize: user.teamSize
+          teamSize: user.teamSize,
+          referrer: user.referrer ? {
+            id: user.referrer._id,
+            userId: user.referrer.userId,
+            name: user.referrer.name,
+            isActive: user.referrer.isActive
+          } : null,
+          activatedAt: user.activatedAt,
+          createdAt: user.createdAt
         },
-        incomeWallet: user.incomeWallet,
+        incomeWallet: {
+          ...user.incomeWallet,
+          dailyTeamIncomeDetails: {
+            total: totalDailyTeamIncome,
+            byLevel: Array.from({length: 7}, (_, i) => i + 1).map(level => ({
+              level,
+              amount: dailyTeamIncomeTransactions
+                .filter(tx => tx.level === level)
+                .reduce((sum, tx) => sum + tx.amount, 0),
+              count: dailyTeamIncomeTransactions.filter(tx => tx.level === level).length
+            }))
+          }
+        },
+        directReferrals: {
+          total: directReferrals.length,
+          active: activeReferrals,
+          inactive: inactiveReferrals,
+          list: directReferralsList
+        },
         matrixStructure,
+        allMatrixUsers,
         matrixSummary: {
           totalLevels: 7,
           totalMatrixIncome,
+          totalDailyTeamIncome,
           totalDownlineMembers: user.downline.length,
-          activationIncome: user.incomeWallet.selfIncome,
-          directReferralIncome: user.incomeWallet.directIncome
+          activationIncome: user.incomeWallet?.selfIncome || 0,
+          directReferralIncome: user.incomeWallet?.directIncome || 0,
+          totalBalance: user.incomeWallet?.balance || 0,
+          totalEarnings: user.incomeWallet?.totalEarnings || 0
         },
         recentTransactions
       }
     });
   } catch (err) {
+    console.error('Error fetching matrix structure:', err);
     res.status(500).json({
       status: 'error',
       message: 'Error fetching matrix structure',

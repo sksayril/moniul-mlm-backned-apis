@@ -65,11 +65,11 @@ const processDailyIncome = async () => {
         }
 
         // Store previous balances for logging
-        const previousDailyIncome = user.incomeWallet.dailyIncome || 0;
+        const previousSelfIncome = user.incomeWallet.selfIncome || 0;
         const previousBalance = user.incomeWallet.balance || 0;
 
-        // Add daily income
-        user.incomeWallet.dailyIncome = (user.incomeWallet.dailyIncome || 0) + DAILY_INCOME_AMOUNT;
+        // Add daily income to selfIncome wallet
+        user.incomeWallet.selfIncome = (user.incomeWallet.selfIncome || 0) + DAILY_INCOME_AMOUNT;
         user.incomeWallet.balance = (user.incomeWallet.balance || 0) + DAILY_INCOME_AMOUNT;
         user.incomeWallet.totalEarnings = (user.incomeWallet.totalEarnings || 0) + DAILY_INCOME_AMOUNT;
         user.incomeWallet.lastDailyIncome = now;
@@ -81,10 +81,10 @@ const processDailyIncome = async () => {
         }
 
         user.incomeTransactions.push({
-          type: 'daily_income',
+          type: 'self_income',
           amount: DAILY_INCOME_AMOUNT,
           date: now,
-          description: `Daily income reward for active account - ₹${DAILY_INCOME_AMOUNT} per day`
+          description: `Daily income reward for active account - ₹${DAILY_INCOME_AMOUNT} per day (added to selfIncome)`
         });
 
         // Save user
@@ -92,7 +92,7 @@ const processDailyIncome = async () => {
         processedCount++;
 
         console.log(`✅ ₹${DAILY_INCOME_AMOUNT} daily income processed for user: ${user.userId} (${user.name})`);
-        console.log(`   Previous dailyIncome: ₹${previousDailyIncome} → New dailyIncome: ₹${user.incomeWallet.dailyIncome}`);
+        console.log(`   Previous selfIncome: ₹${previousSelfIncome} → New selfIncome: ₹${user.incomeWallet.selfIncome}`);
         console.log(`   Previous balance: ₹${previousBalance} → New balance: ₹${user.incomeWallet.balance}`);
 
       } catch (userError) {
@@ -148,10 +148,10 @@ const getDailyIncomeStats = async () => {
     // Calculate total daily income distributed today
     const totalDistributedToday = todayRecipients * DAILY_INCOME_AMOUNT;
 
-    // Get total daily income ever distributed
+    // Get total daily income ever distributed (from selfIncome)
     const totalDailyIncomeEver = await User.aggregate([
-      { $match: { 'incomeWallet.dailyIncome': { $gt: 0 } } },
-      { $group: { _id: null, total: { $sum: '$incomeWallet.dailyIncome' } } }
+      { $match: { 'incomeWallet.selfIncome': { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: '$incomeWallet.selfIncome' } } }
     ]);
 
     return {
@@ -276,11 +276,11 @@ const forceProcessDailyIncome = async () => {
           };
         }
 
-        const previousDailyIncome = user.incomeWallet.dailyIncome || 0;
+        const previousSelfIncome = user.incomeWallet.selfIncome || 0;
         const previousBalance = user.incomeWallet.balance || 0;
 
-        // Add daily income
-        user.incomeWallet.dailyIncome = (user.incomeWallet.dailyIncome || 0) + DAILY_INCOME_AMOUNT;
+        // Add daily income to selfIncome wallet
+        user.incomeWallet.selfIncome = (user.incomeWallet.selfIncome || 0) + DAILY_INCOME_AMOUNT;
         user.incomeWallet.balance = (user.incomeWallet.balance || 0) + DAILY_INCOME_AMOUNT;
         user.incomeWallet.totalEarnings = (user.incomeWallet.totalEarnings || 0) + DAILY_INCOME_AMOUNT;
         user.incomeWallet.lastDailyIncome = now;
@@ -292,17 +292,17 @@ const forceProcessDailyIncome = async () => {
         }
 
         user.incomeTransactions.push({
-          type: 'daily_income',
+          type: 'self_income',
           amount: DAILY_INCOME_AMOUNT,
           date: now,
-          description: `FORCE daily income reward - ₹${DAILY_INCOME_AMOUNT} per day`
+          description: `FORCE daily income reward - ₹${DAILY_INCOME_AMOUNT} per day (added to selfIncome)`
         });
 
         await user.save();
         processedCount++;
 
         console.log(`✅ FORCE ₹${DAILY_INCOME_AMOUNT} daily income processed for: ${user.userId} (${user.name})`);
-        console.log(`   Previous dailyIncome: ₹${previousDailyIncome} → New dailyIncome: ₹${user.incomeWallet.dailyIncome}`);
+        console.log(`   Previous selfIncome: ₹${previousSelfIncome} → New selfIncome: ₹${user.incomeWallet.selfIncome}`);
         console.log(`   Previous balance: ₹${previousBalance} → New balance: ₹${user.incomeWallet.balance}`);
 
       } catch (userError) {
