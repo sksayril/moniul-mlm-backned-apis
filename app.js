@@ -91,8 +91,8 @@ const dailyIncomeScheduler = require('./services/daily.income.scheduler');
 dailyIncomeScheduler.startDailyIncomeScheduler();
 
 // Start matrix income scheduler
-const matrixIncomeScheduler = require('./services/matrix.income.scheduler');
-matrixIncomeScheduler.startMatrixIncomeScheduler();
+// const matrixIncomeScheduler = require('./services/matrix.income.scheduler');
+// matrixIncomeScheduler.startMatrixIncomeScheduler();
 
 // Error handling middleware
 app.use((err, req, res, next) => {
